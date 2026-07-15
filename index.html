@@ -8,6 +8,12 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        /* Smooth Custom Physics-like Transitions */
+        .card-transition {
+            transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease;
+        }
+    </style>
 </head>
 <body class="bg-emerald-900 min-h-screen text-white p-4 transition-colors duration-500">
     <div id="root" class="w-full max-w-4xl mx-auto"></div>
@@ -59,13 +65,17 @@
             const [matchWindowActive, setMatchWindowActive] = useState(false);
             const [matchCountdown, setMatchCountdown] = useState(0);
 
+            // Animation States
+            const [animatingCard, setAnimatingCard] = useState(null); // { type: 'swap'|'discard'|'burn', from: {}, to: {} }
+            const [animatingIndices, setAnimatingIndices] = useState([]); // indices currently shifting physically on-screen
+
             const aiTimerRef = useRef(null);
             const countdownIntervalRef = useRef(null);
 
             const startNewGame = () => {
                 const newDeck = createDeck();
-                const p1Cards = [newDeck.pop(), newDeck.pop(), newDeck.pop(), newDeck.pop()].map(c => ({...c, visible: false}));
-                const p2Cards = [newDeck.pop(), newDeck.pop(), newDeck.pop(), newDeck.pop()].map(c => ({...c, visible: false}));
+                const p1Cards = [newDeck.pop(), newDeck.pop(), newDeck.pop(), newDeck.pop()].map((c, i) => ({...c, visible: false, id: `p1-${i}`}));
+                const p2Cards = [newDeck.pop(), newDeck.pop(), newDeck.pop(), newDeck.pop()].map((c, i) => ({...c, visible: false, id: `p2-${i}`}));
                 
                 setDeck(newDeck);
                 setPlayers([
@@ -84,6 +94,8 @@
                 setSwapSelection([]);
                 setMatchWindowActive(false);
                 setMatchCountdown(0);
+                setAnimatingCard(null);
+                setAnimatingIndices([]);
                 clearTimers();
             };
 
@@ -140,45 +152,59 @@
 
             const swapCard = (index) => {
                 if (!activeCard) return;
-                const p1Cards = [...players[0].cards];
-                const swappedOut = p1Cards[index];
                 
-                p1Cards[index] = { ...activeCard, visible: false };
-                setDiscardPile(prev => [...prev, swappedOut]);
-                setActiveCard(null);
-                setPlayers([{ ...players[0], cards: p1Cards }, players[1]]);
+                // Visual swap trigger
+                setAnimatingIndices([{ playerIdx: 0, cardIdx: index }]);
                 
-                triggerMatchWindow(() => {
-                    endTurn();
-                });
+                setTimeout(() => {
+                    const p1Cards = [...players[0].cards];
+                    const swappedOut = p1Cards[index];
+                    
+                    p1Cards[index] = { ...activeCard, visible: false, id: `p1-${index}-${Date.now()}` };
+                    setDiscardPile(prev => [...prev, swappedOut]);
+                    setActiveCard(null);
+                    setPlayers([{ ...players[0], cards: p1Cards }, players[1]]);
+                    setAnimatingIndices([]);
+                    
+                    triggerMatchWindow(() => {
+                        endTurn();
+                    });
+                }, 350); // Matches the 0.35s transition window
             };
 
             const discardActive = () => {
                 if (!activeCard) return;
-                const discarded = activeCard;
-                setDiscardPile(prev => [...prev, discarded]);
-                setActiveCard(null);
+                
+                // Trigger Discard Flying Animation
+                setAnimatingCard({ type: 'discard', card: activeCard });
+                
+                setTimeout(() => {
+                    const discarded = activeCard;
+                    setDiscardPile(prev => [...prev, discarded]);
+                    setActiveCard(null);
+                    setAnimatingCard(null);
 
-                if (discarded.value === '8') {
-                    setMessage("Power: Click one of YOUR cards to peek!");
-                    setGameState('peek-power');
-                } else if (discarded.value === '10') {
-                    setMessage("Power: Click one of your OPPONENT'S cards to spy!");
-                    setGameState('spy-power');
-                } else if (discarded.value === 'J') {
-                    setMessage("Power: Jack! Go again! Take another turn immediately.");
-                } else if (discarded.value === 'Q') {
-                    setMessage("Power: Swap any 2 cards. Click the first card.");
-                    setGameState('swap-power-1');
-                    setSwapSelection([]);
-                } else if (discarded.value === 'K') {
-                    setMessage("Power: King! Click an opponent's card to look at it first.");
-                    setGameState('king-look');
-                } else {
-                    triggerMatchWindow(() => {
-                        endTurn();
-                    });
-                }
+                    if (discarded.value === '8') {
+                        setMessage("Power: Click one of YOUR cards to peek!");
+                        setGameState('peek-power');
+                    } else if (discarded.value === '10') {
+                        setMessage("Power: Click one of your OPPONENT'S cards to spy!");
+                        setGameState('spy-power');
+                    } else if (discarded.value === 'J') {
+                        setMessage("Power: Jack! Go again! Take another turn immediately.");
+                    } else if (discarded.value === 'Q') {
+                        setMessage("Power: Swap any 2 cards. Click the first card.");
+                        setGameState('swap-power-1');
+                        setSwapSelection([]);
+                    } else if (discarded.value === 'K') {
+                        setMessage("Power: King! Click an opponent's card to look at it first.");
+                        setGameState('king-look');
+                    } else {
+                        triggerMatchWindow(() => {
+                            endTurn();
+                        });
+                    }
+                }, 350);
             };
 
             const enterMatchMode = () => {
@@ -197,38 +223,51 @@
                     clearTimers();
                     setMatchWindowActive(false);
 
-                    setMessage(`CORRECT MATCH! The ${targetCard.value}${targetCard.suit} has been burned!`);
-                    const updatedPlayers = JSON.parse(JSON.stringify(players));
-                    updatedPlayers[pIdx].cards[cIdx] = null;
-                    setDiscardPile(prev => [...prev, targetCard]);
+                    // Burn moving translation effect
+                    setAnimatingIndices([{ playerIdx: pIdx, cardIdx: cIdx, action: 'burn' }]);
 
-                    if (pIdx === 0) {
-                        setPlayers(updatedPlayers);
-                        setTimeout(() => {
-                            setGameState('playing');
-                            endTurn();
-                        }, 1500);
-                    } else {
-                        const validP1Indices = updatedPlayers[0].cards.map((c, i) => c !== null ? i : null).filter(v => v !== null);
-                        if (validP1Indices.length > 0) {
-                            setMessage("Perfect! Transferring one of your cards to them...");
-                            setTimeout(() => {
-                                const randomP1Index = validP1Indices[Math.floor(Math.random() * validP1Indices.length)];
-                                const givenCard = updatedPlayers[0].cards[randomP1Index];
-                                updatedPlayers[0].cards[randomP1Index] = null;
-                                updatedPlayers[1].cards[cIdx] = givenCard;
-                                setPlayers(updatedPlayers);
-                                setGameState('playing');
-                                endTurn();
-                            }, 1500);
-                        } else {
+                    setTimeout(() => {
+                        setMessage(`CORRECT MATCH! The ${targetCard.value}${targetCard.suit} has been burned!`);
+                        const updatedPlayers = JSON.parse(JSON.stringify(players));
+                        updatedPlayers[pIdx].cards[cIdx] = null;
+                        setDiscardPile(prev => [...prev, targetCard]);
+                        setAnimatingIndices([]);
+
+                        if (pIdx === 0) {
                             setPlayers(updatedPlayers);
                             setTimeout(() => {
                                 setGameState('playing');
                                 endTurn();
                             }, 1500);
+                        } else {
+                            const validP1Indices = updatedPlayers[0].cards.map((c, i) => c !== null ? i : null).filter(v => v !== null);
+                            if (validP1Indices.length > 0) {
+                                setMessage("Perfect! Transferring one of your cards to them...");
+                                setTimeout(() => {
+                                    const randomP1Index = validP1Indices[Math.floor(Math.random() * validP1Indices.length)];
+                                    const givenCard = updatedPlayers[0].cards[randomP1Index];
+                                    
+                                    // Animate transfer
+                                    setAnimatingIndices([{ playerIdx: 0, cardIdx: randomP1Index, targetPlayerIdx: 1, targetCardIdx: cIdx }]);
+                                    
+                                    setTimeout(() => {
+                                        updatedPlayers[0].cards[randomP1Index] = null;
+                                        updatedPlayers[1].cards[cIdx] = givenCard;
+                                        setPlayers(updatedPlayers);
+                                        setAnimatingIndices([]);
+                                        setGameState('playing');
+                                        endTurn();
+                                    }, 350);
+                                }, 1000);
+                            } else {
+                                setPlayers(updatedPlayers);
+                                setTimeout(() => {
+                                    setGameState('playing');
+                                    endTurn();
+                                }, 1500);
+                            }
                         }
-                    }
+                    }, 350);
                 } else {
                     clearTimers();
                     setMatchWindowActive(false);
@@ -237,7 +276,7 @@
                     const newDeck = [...deck];
                     const penaltyCard = newDeck.pop();
                     const updatedPlayers = JSON.parse(JSON.stringify(players));
-                    updatedPlayers[0].cards.push({ ...penaltyCard, visible: false });
+                    updatedPlayers[0].cards.push({ ...penaltyCard, visible: false, id: `p1-penalty-${Date.now()}` });
                     setDeck(newDeck);
                     setPlayers(updatedPlayers);
 
@@ -310,13 +349,6 @@
                 } else if (gameState === 'swap-power-2') {
                     const first = swapSelection[0];
                     performSwap(first.playerIdx, first.cardIdx, pIdx, cIdx);
-                    setMessage("Cards swapped!");
-                    setTimeout(() => {
-                        setGameState('playing');
-                        triggerMatchWindow(() => {
-                            endTurn();
-                        });
-                    }, 1000);
                 }
 
                 if (gameState === 'king-look' && pIdx === 1) {
@@ -331,22 +363,34 @@
                 } else if (gameState === 'king-swap-2') {
                     const first = swapSelection[0];
                     performSwap(first.playerIdx, first.cardIdx, pIdx, cIdx);
+                }
+            };
+
+            const performSwap = (p1, c1, p2, c2) => {
+                // Set animating state to translate both nodes
+                setAnimatingIndices([
+                    { playerIdx: p1, cardIdx: c1, targetPlayerIdx: p2, targetCardIdx: c2 },
+                    { playerIdx: p2, cardIdx: c2, targetPlayerIdx: p1, targetCardIdx: c1 }
+                ]);
+
+                setTimeout(() => {
+                    const updatedPlayers = JSON.parse(JSON.stringify(players));
+                    const temp = updatedPlayers[p1].cards[c1];
+                    updatedPlayers[p1].cards[c1] = updatedPlayers[p2].cards[c2];
+                    updatedPlayers[p2].cards[c2] = temp;
+                    
+                    setPlayers(updatedPlayers);
+                    setAnimatingIndices([]);
                     setMessage("Cards swapped!");
+                    
                     setTimeout(() => {
+                        const targetState = gameState.startsWith('king') ? 'playing' : 'playing';
                         setGameState('playing');
                         triggerMatchWindow(() => {
                             endTurn();
                         });
                     }, 1000);
-                }
-            };
-
-            const performSwap = (p1, c1, p2, c2) => {
-                const updatedPlayers = JSON.parse(JSON.stringify(players));
-                const temp = updatedPlayers[p1].cards[c1];
-                updatedPlayers[p1].cards[c1] = updatedPlayers[p2].cards[c2];
-                updatedPlayers[p2].cards[c2] = temp;
-                setPlayers(updatedPlayers);
+                }, 350); // Finish moving physically before code swaps their array indexes
             };
 
             const revealTemp = (pIdx, cIdx, callback) => {
@@ -395,28 +439,37 @@
                         } else if (drawn.value === 'Q') {
                             if (p1Valid.length > 0 && p2Valid.length > 0) {
                                 performSwap(0, p1Valid[Math.floor(Math.random()*p1Valid.length)], 1, p2Valid[Math.floor(Math.random()*p2Valid.length)]);
+                            } else {
+                                triggerMatchWindow(() => completeAITurn());
                             }
-                            setMessage("Opponent swapped a card!");
-                            triggerMatchWindow(() => completeAITurn());
                         } else if (drawn.value === 'K') {
                             if (p1Valid.length > 0 && p2Valid.length > 0) {
                                 performSwap(0, p1Valid[Math.floor(Math.random()*p1Valid.length)], 1, p2Valid[Math.floor(Math.random()*p2Valid.length)]);
+                            } else {
+                                triggerMatchWindow(() => completeAITurn());
                             }
-                            setMessage("Opponent looked and swapped!");
-                            triggerMatchWindow(() => completeAITurn());
                         }
                     }, 1500);
                 } else {
                     if (p2Valid.length > 0) {
                         const p2Cards = [...players[1].cards];
                         const swapIdx = p2Valid[Math.floor(Math.random() * p2Valid.length)];
-                        const swappedOut = p2Cards[swapIdx];
-                        p2Cards[swapIdx] = { ...drawn, visible: false };
-                        setDiscardPile(prev => [...prev, swappedOut]);
-                        setPlayers([players[0], { ...players[1], cards: p2Cards }]);
-                        setMessage("Opponent swapped a card.");
+                        
+                        // AI Swap physically animated
+                        setAnimatingIndices([{ playerIdx: 1, cardIdx: swapIdx }]);
+                        
+                        setTimeout(() => {
+                            const swappedOut = p2Cards[swapIdx];
+                            p2Cards[swapIdx] = { ...drawn, visible: false, id: `p2-${swapIdx}-${Date.now()}` };
+                            setDiscardPile(prev => [...prev, swappedOut]);
+                            setPlayers([players[0], { ...players[1], cards: p2Cards }]);
+                            setAnimatingIndices([]);
+                            setMessage("Opponent swapped a card.");
+                            triggerMatchWindow(() => completeAITurn());
+                        }, 350);
+                    } else {
+                        triggerMatchWindow(() => completeAITurn());
                     }
-                    triggerMatchWindow(() => completeAITurn());
                 }
             };
 
@@ -481,25 +534,54 @@
                 return players[playerIdx].cards.filter(c => c !== null).length;
             };
 
+            // Helper to compute CSS classes dynamically for physical translations
+            const getAnimationClass = (playerIdx, cardIdx) => {
+                const anim = animatingIndices.find(a => a.playerIdx === playerIdx && a.cardIdx === cardIdx);
+                if (!anim) return '';
+
+                if (anim.action === 'burn') {
+                    // Slide down or up to center pile
+                    return playerIdx === 0 
+                        ? '-translate-y-24 scale-75 opacity-20' 
+                        : 'translate-y-24 scale-75 opacity-20';
+                }
+
+                if (anim.targetPlayerIdx !== undefined) {
+                    // Swapping between players: Slide relative distance
+                    const samePlayer = anim.targetPlayerIdx === playerIdx;
+                    if (!samePlayer) {
+                        return playerIdx === 0 ? '-translate-y-64 rotate-12 scale-95' : 'translate-y-64 -rotate-12 scale-95';
+                    } else {
+                        // Same row swap
+                        const isLeft = cardIdx % 2 === 0;
+                        return isLeft ? 'translate-x-12' : '-translate-x-12';
+                    }
+                }
+
+                // Normal swap animation with active drawn card
+                return 'scale-90 opacity-40';
+            };
+
             return (
-                <div className="flex flex-col min-h-screen justify-between py-6">
+                <div className="flex flex-col min-h-screen justify-between py-6 select-none">
                     <div className="text-center">
                         <h1 className="text-4xl font-extrabold tracking-widest text-yellow-400 drop-shadow">CAMBIO</h1>
                         <p className="text-sm text-emerald-200 mt-1">Memory Grid Edition</p>
                     </div>
 
                     <div className="w-full flex flex-col md:flex-row justify-around items-center my-6 gap-6">
-                        {/* Opponent */}
+                        {/* Opponent (P2) */}
                         <div className="flex flex-col items-center bg-emerald-800/50 p-4 rounded-xl border border-emerald-700 w-80 transition-all duration-300">
                             <h2 className="text-lg font-semibold mb-3 text-red-300">Opponent ({getActiveCount(1)} Cards)</h2>
                             <div className="grid grid-cols-2 gap-3">
                                 {players[1].cards.map((card, idx) => {
                                     if (!card) return <div key={idx} className="w-20 h-28 rounded-lg border-2 border-dashed border-emerald-800/40 transition-all duration-300 scale-95 opacity-50"></div>;
+                                    const animClass = getAnimationClass(1, idx);
                                     return (
                                         <div 
-                                            key={idx} 
+                                            key={card.id || idx} 
                                             onClick={() => handleCardClick(1, idx)}
-                                            className={`w-20 h-28 rounded-lg flex items-center justify-center font-bold text-xl cursor-pointer border-2 transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95 shadow-lg ${
+                                            className={`w-20 h-28 rounded-lg flex items-center justify-center font-bold text-xl cursor-pointer border-2 card-transition transform hover:scale-105 active:scale-95 shadow-lg ${animClass} ${
                                                 card.visible ? 'bg-white text-black border-yellow-400 rotate-0' : 'bg-blue-800 border-white text-white hover:bg-blue-700'
                                             }`}
                                         >
@@ -512,7 +594,7 @@
 
                         {/* Center Pile */}
                         <div className="flex flex-col items-center gap-4 bg-emerald-950/60 p-5 rounded-2xl border border-emerald-800 transition-all duration-300">
-                            <div className="flex gap-6">
+                            <div className="flex gap-6 relative">
                                 <button 
                                     onClick={drawFromDeck} 
                                     disabled={gameState !== 'playing' || activeCard || currentPlayer !== 0 || matchWindowActive}
@@ -542,8 +624,10 @@
                             </button>
 
                             {activeCard && (
-                                <div className="flex flex-col items-center border-t border-emerald-800 pt-3 w-full animate-fade-in">
-                                    <div className={`w-16 h-24 bg-white text-black border-2 border-yellow-400 rounded-lg flex flex-col items-center justify-center font-bold text-lg transition-all duration-300 transform scale-110 shadow-xl ${activeCard.isRed ? 'text-red-600' : 'text-black'}`}>
+                                <div className="flex flex-col items-center border-t border-emerald-800 pt-3 w-full transition-all duration-300">
+                                    <div className={`w-16 h-24 bg-white text-black border-2 border-yellow-400 rounded-lg flex flex-col items-center justify-center font-bold text-lg transition-all duration-350 ease-out transform scale-110 shadow-xl ${
+                                        animatingCard?.type === 'discard' ? 'translate-y-[-100px] opacity-0 scale-50' : ''
+                                    } ${activeCard.isRed ? 'text-red-600' : 'text-black'}`}>
                                         <div>{activeCard.value}</div>
                                         <div className="text-2xl">{activeCard.suit}</div>
                                     </div>
@@ -554,17 +638,18 @@
                             )}
                         </div>
 
-                        {/* Player */}
+                        {/* Player (P1) */}
                         <div className="flex flex-col items-center bg-emerald-800/50 p-4 rounded-xl border border-emerald-700 w-80 transition-all duration-300">
                             <h2 className="text-lg font-semibold mb-3 text-green-300">Your Hand ({getActiveCount(0)} Cards)</h2>
                             <div className="grid grid-cols-2 gap-3">
                                 {players[0].cards.map((card, idx) => {
                                     if (!card) return <div key={idx} className="w-20 h-28 rounded-lg border-2 border-dashed border-emerald-800/40 transition-all duration-300 scale-95 opacity-50"></div>;
+                                    const animClass = getAnimationClass(0, idx);
                                     return (
                                         <div 
-                                            key={idx} 
+                                            key={card.id || idx} 
                                             onClick={() => handleCardClick(0, idx)}
-                                            className={`w-20 h-28 rounded-lg flex items-center justify-center font-bold text-xl cursor-pointer border-2 transition-all duration-300 ease-in-out transform hover:scale-105 hover:-translate-y-1 active:scale-95 shadow-lg ${
+                                            className={`w-20 h-28 rounded-lg flex items-center justify-center font-bold text-xl cursor-pointer border-2 card-transition transform hover:scale-105 hover:-translate-y-1 active:scale-95 shadow-lg ${animClass} ${
                                                 card.visible || (activeCard && gameState === 'playing')
                                                     ? 'bg-white text-black border-yellow-400 rotate-0' 
                                                     : 'bg-red-800 border-white text-white hover:bg-red-700'
