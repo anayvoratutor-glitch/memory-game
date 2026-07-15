@@ -13,73 +13,73 @@
             transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease;
         }
         
-        /* Disable bounce-scrolling entirely to lock screen space */
+        /* Lock screen to prevent layout shifts */
         html, body {
             overscroll-behavior-y: contain;
             overflow: hidden;
             height: 100%;
         }
 
-        /* 🚀 FLUID ADAPTIVE CARD SIZING 🚀 */
+        /* 🚀 BALANCED FLUID CARD SIZES 🚀 */
         .card-fluid {
-            /* Default: Mobile portrait size */
-            width: 12vw;
-            height: 17vw;
-            max-width: 64px;
-            max-height: 90px;
-            min-width: 40px;
-            min-height: 56px;
-            font-size: 0.875rem;
+            /* Default: Balanced phone layout */
+            width: 12.5vw;
+            height: 17.5vw;
+            max-width: 60px;
+            max-height: 84px;
+            min-width: 38px;
+            min-height: 54px;
+            font-size: 0.8rem;
         }
 
         .pile-fluid {
             width: 14vw;
-            height: 20vw;
-            max-width: 76px;
-            max-height: 106px;
-            min-width: 46px;
-            min-height: 64px;
+            height: 19vw;
+            max-width: 68px;
+            max-height: 96px;
+            min-width: 44px;
+            min-height: 62px;
         }
 
-        /* Laptop & Large Screens */
+        /* Laptop & Large Desktop Screens: Make cards normal and large */
         @media (min-width: 1024px) {
             .card-fluid {
-                width: 5.5rem;
-                height: 8rem;
+                width: 5rem;
+                height: 7.25rem;
                 max-width: none;
                 max-height: none;
                 font-size: 1.25rem;
             }
             .pile-fluid {
-                width: 6.5rem;
-                height: 9.5rem;
+                width: 5.75rem;
+                height: 8.25rem;
                 max-width: none;
                 max-height: none;
             }
         }
 
-        /* Mobile Landscape (Short screens) */
+        /* Mobile Landscape (Short vertical screens) */
         @media (max-height: 480px) {
             .card-fluid {
-                width: 9vh;
-                height: 13vh;
-                font-size: 0.75rem;
+                width: 10vh;
+                height: 14.5vh;
+                font-size: 0.7rem;
             }
             .pile-fluid {
-                width: 11vh;
-                height: 16vh;
+                width: 11.5vh;
+                height: 16.5vh;
             }
             .hide-on-short {
                 display: none !important;
             }
             .tight-padding {
-                padding: 0.15rem !important;
+                padding: 0.2rem !important;
             }
         }
     </style>
 </head>
 <body class="bg-emerald-900 text-white p-1 sm:p-4 transition-colors duration-500 h-full flex flex-col justify-center">
-    <div id="root" class="w-full max-w-6xl mx-auto h-full flex flex-col justify-between"></div>
+    <div id="root" class="w-full max-w-5xl mx-auto h-full flex flex-col justify-between"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
@@ -490,17 +490,18 @@
                 }, 2000);
             };
 
-            const getNextPlayerCCW = (current) => {
+            /* 🔄 CLOCKWISE TURN DIRECTION LOGIC 🔄 */
+            const getNextPlayerCW = (current) => {
                 if (playerCount === 2) {
                     return current === 0 ? 1 : 0;
                 } else if (playerCount === 3) {
-                    if (current === 0) return 2;
-                    if (current === 2) return 1;
+                    if (current === 0) return 1;
+                    if (current === 1) return 2;
                     return 0;
                 } else { 
-                    if (current === 0) return 2;
-                    if (current === 2) return 1;
-                    if (current === 1) return 3;
+                    if (current === 0) return 1;
+                    if (current === 1) return 2;
+                    if (current === 2) return 3;
                     return 0;
                 }
             };
@@ -520,12 +521,12 @@
                 }
                 
                 setGameState('waiting-ready');
-                const nextPlayerIdx = getNextPlayerCCW(currentPlayer);
+                const nextPlayerIdx = getNextPlayerCW(currentPlayer);
                 setMessage(`Turn ended.`);
             };
 
             const handleReadyNextTurn = () => {
-                const nextPlayer = getNextPlayerCCW(currentPlayer);
+                const nextPlayer = getNextPlayerCW(currentPlayer);
                 setCurrentPlayer(nextPlayer);
                 
                 if (nextPlayer === 0) {
@@ -948,12 +949,12 @@
                         )}
                     </div>
 
-                    {/* Bottom Toolbar */}
-                    <div className="w-full flex flex-row justify-between items-center bg-emerald-950 p-2 rounded-xl gap-2 text-[11px] md:text-sm">
-                        <div className="flex gap-1.5">
-                            <button onClick={() => setGameState('menu')} className="bg-emerald-800 text-white font-bold py-0.5 px-2 rounded text-[10px] md:text-xs">Menu</button>
-                            <button onClick={handleStartClick} className="bg-yellow-500 text-slate-950 font-extrabold py-0.5 px-2 rounded text-[10px] md:text-xs">Reset</button>
-                            <button onClick={callShow} disabled={gameState !== 'playing' || showCalledBy !== null || matchWindowActive} className="bg-orange-600 text-white font-extrabold py-0.5 px-2 rounded text-[10px] md:text-xs disabled:opacity-50">Show!</button>
+                    {/* Bottom Toolbar: Perfectly visible on all mobile orientations */}
+                    <div className="w-full flex flex-row justify-between items-center bg-emerald-950 p-2 sm:p-3 rounded-xl gap-2 text-[11px] md:text-sm mb-1">
+                        <div className="flex gap-2">
+                            <button onClick={() => setGameState('menu')} className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-1 px-3 rounded text-[10px] md:text-xs transition-colors">Menu</button>
+                            <button onClick={handleStartClick} className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-extrabold py-1 px-3 rounded text-[10px] md:text-xs transition-colors">Reset</button>
+                            <button onClick={callShow} disabled={gameState !== 'playing' || showCalledBy !== null || matchWindowActive} className="bg-orange-600 hover:bg-orange-500 text-white font-extrabold py-1 px-3 rounded text-[10px] md:text-xs disabled:opacity-50 transition-colors">Show!</button>
                         </div>
                         {scores ? (
                             <div className="flex gap-1.5 text-[10px] md:text-xs font-bold">
