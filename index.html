@@ -153,6 +153,11 @@
             const aiTimerRef = useRef(null);
             const countdownIntervalRef = useRef(null);
 
+            // Cleanup timers when component unmounts or restarts
+            useEffect(() => {
+                return () => clearTimers();
+            }, []);
+
             const handleStartClick = () => {
                 setGameState('player-select');
             };
@@ -535,7 +540,6 @@
                 }
                 
                 setGameState('waiting-ready');
-                const nextPlayerIdx = getNextPlayerCW(currentPlayer);
                 setMessage(`Turn ended.`);
             };
 
@@ -963,7 +967,7 @@
                         )}
                     </div>
 
-                    {/* 🎮 NEW ROBUST & READABLE BOTTOM TOOLBAR 🎮 */}
+                    {/* 🎮 BOTTOM TOOLBAR 🎮 */}
                     <div className="w-full flex flex-col sm:flex-row justify-between items-center bg-emerald-950 p-3 sm:p-4 rounded-2xl gap-3 text-xs md:text-base mb-1 border border-emerald-800 lg:p-6">
                         <div className="flex gap-3 w-full sm:w-auto justify-center lg:gap-6">
                             <button onClick={() => setGameState('menu')} className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-lg text-xs md:text-sm transition-colors border border-emerald-700 shadow laptop-btn-large">
