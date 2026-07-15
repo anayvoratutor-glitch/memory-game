@@ -730,29 +730,73 @@
                         </div>
 
                         {showRules && (
-                            <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
-                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 max-w-sm w-full max-h-[80vh] overflow-y-auto text-left shadow-2xl lg:max-w-md lg:p-8">
-                                    <h2 className="text-xl font-black text-yellow-400 mb-3 flex justify-between items-center laptop-text-large">
-                                        <span>Rules</span>
-                                        <button onClick={() => setShowRules(false)} className="text-slate-400 text-2xl">&times;</button>
+                            <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+                                <div className="bg-slate-900 border-2 border-emerald-500/30 rounded-3xl p-6 max-w-sm w-full max-h-[85vh] overflow-y-auto text-left shadow-2xl lg:max-w-3xl lg:p-8">
+                                    <h2 className="text-xl md:text-2xl font-black text-yellow-400 mb-4 flex justify-between items-center border-b border-slate-800 pb-3">
+                                        <span>📖 How to Play Memory Grid</span>
+                                        <button onClick={() => setShowRules(false)} className="text-slate-400 hover:text-white transition-colors text-3xl font-normal">&times;</button>
                                     </h2>
-                                    <div className="space-y-3 text-slate-200 text-xs laptop-text-large">
-                                        <p><strong>Goal:</strong> Lowest score wins when someone calls "Show!".</p>
-                                        <hr className="border-slate-800" />
-                                        <p><strong>Setup:</strong> Look at 2 cards first.</p>
-                                        <hr className="border-slate-800" />
-                                        <div>
-                                            <p className="font-bold text-yellow-400">Powers (Discarded):</p>
-                                            <ul className="list-disc list-inside space-y-0.5 text-slate-300">
-                                                <li><strong>8:</strong> Peek yours.</li>
-                                                <li><strong>10:</strong> Spy theirs.</li>
-                                                <li><strong>Jack:</strong> Go again.</li>
-                                                <li><strong>Queen:</strong> Swap any 2 cards.</li>
-                                                <li><strong>King:</strong> Look, then swap.</li>
-                                            </ul>
+                                    
+                                    <div className="space-y-4 text-slate-200 text-xs md:text-sm lg:grid lg:grid-cols-2 lg:gap-8 lg:space-y-0">
+                                        
+                                        {/* Column 1: Core Flow */}
+                                        <div className="space-y-4">
+                                            <div>
+                                                <h3 className="font-bold text-yellow-400 text-sm md:text-base mb-1">🎯 Objective</h3>
+                                                <p className="text-slate-300 leading-relaxed">
+                                                    Have the <strong>lowest card score</strong> in your hand when a player yells <strong>"Show!"</strong>. Keep track of your face-down cards to match or swap them out!
+                                                </p>
+                                            </div>
+
+                                            <div className="border-t border-slate-800/80 pt-3">
+                                                <h3 className="font-bold text-yellow-400 text-sm md:text-base mb-1">⚙️ Setup & Turns</h3>
+                                                <ul className="list-disc list-inside space-y-1.5 text-slate-300">
+                                                    <li>You are dealt 4 cards face-down. You get to <strong>peek at exactly 2</strong> of them at the start.</li>
+                                                    <li>On your turn, either <strong>draw a card</strong> from the deck or <strong>take the face-up card</strong> from the discard pile.</li>
+                                                    <li>Swap the drawn card with one of your 4 face-down cards, discarding your old one.</li>
+                                                </ul>
+                                            </div>
+
+                                            <div className="border-t border-slate-800/80 pt-3">
+                                                <h3 className="font-bold text-yellow-400 text-sm md:text-base mb-1">⚡ Slap to Match!</h3>
+                                                <p className="text-slate-300 leading-relaxed">
+                                                    When any card is discarded, you have <strong>4 seconds</strong> to hit <strong className="text-red-400">Match!</strong> and tap a matching card in your hand to burn it away completely!
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Column 2: Powers & Scores */}
+                                        <div className="space-y-4">
+                                            <div className="bg-emerald-950/40 p-3 rounded-xl border border-emerald-900">
+                                                <h3 className="font-bold text-yellow-400 text-sm md:text-base mb-2">🔥 Discard Powers</h3>
+                                                <p className="text-slate-400 text-[11px] mb-2 leading-tight">These powers trigger immediately when drawn and thrown straight to the discard pile:</p>
+                                                <ul className="space-y-1.5 text-slate-300 text-xs">
+                                                    <li><strong>8:</strong> Peek at one of your own cards.</li>
+                                                    <li><strong>10:</strong> Spy on any opponent's card.</li>
+                                                    <li><strong>Jack:</strong> Take an immediate extra turn!</li>
+                                                    <li><strong>Queen:</strong> Swap any 2 cards on the entire table.</li>
+                                                    <li><strong>King:</strong> Spy on an opponent's card, then swap any 2.</li>
+                                                </ul>
+                                            </div>
+
+                                            <div className="border-t border-slate-800/80 pt-3">
+                                                <h3 className="font-bold text-yellow-400 text-sm md:text-base mb-1.5">📊 Scoring Values</h3>
+                                                <div className="grid grid-cols-2 gap-2 text-xs text-slate-300">
+                                                    <div>🃏 <strong>Joker:</strong> -1 point</div>
+                                                    <div>✨ <strong>7:</strong> 0 points</div>
+                                                    <div>👑 <strong>King:</strong> 13 points</div>
+                                                    <div>💅 <strong>Queen:</strong> 12 points</div>
+                                                    <div>⚔️ <strong>Jack:</strong> 11 points</div>
+                                                    <div>🅰️ <strong>Ace:</strong> 1 point</div>
+                                                    <div className="col-span-2 text-slate-400 italic">All other cards are face value.</div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <button onClick={() => setShowRules(false)} className="mt-4 w-full bg-yellow-500 text-slate-950 font-bold py-2 rounded-xl laptop-btn-large">Got It!</button>
+
+                                    <button onClick={() => setShowRules(false)} className="mt-6 w-full bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-extrabold py-3 rounded-xl transition-all shadow-md text-sm md:text-base">
+                                        Let's Play! 🃏
+                                    </button>
                                 </div>
                             </div>
                         )}
