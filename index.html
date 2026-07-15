@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cambio Card Game</title>
+    <title>Memory Card Game</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -38,7 +38,7 @@
         function getCardPoints(card) {
             if (!card) return 0;
             if (card.value === 'Joker') return -1;
-            if (card.value === '7') return 0; // <-- Added 7 equals 0 rule!
+            if (card.value === '7') return 0; 
             if (card.value === 'K') return 13;
             if (card.value === 'Q') return 12;
             if (card.value === 'J') return 11;
@@ -186,7 +186,6 @@
                         setGameState('spy-power');
                     } else if (discarded.value === 'J') {
                         setMessage("Power: Jack! Go again! Take another turn immediately.");
-                        // Keep current player as 0, clear active state so they can make their extra move
                         setGameState('playing');
                     } else if (discarded.value === 'Q') {
                         setMessage("Power: Swap any 2 cards. Click the first card.");
@@ -558,8 +557,8 @@
                 return (
                     <div className="flex flex-col items-center justify-center min-h-screen text-center px-4">
                         <div className="bg-emerald-950/80 border border-emerald-800 p-8 rounded-3xl shadow-2xl max-w-md w-full backdrop-blur-md">
-                            <h1 className="text-5xl font-extrabold tracking-widest text-yellow-400 drop-shadow mb-2">CAMBIO</h1>
-                            <p className="text-emerald-200 text-sm mb-8">Ultimate Memory Card Game</p>
+                            <h1 className="text-4xl font-extrabold tracking-widest text-yellow-400 drop-shadow mb-2 leading-snug">MEMORY CARD GAME</h1>
+                            <p className="text-emerald-200 text-sm mb-8">Ultimate Memory Grid Experience</p>
                             
                             <div className="flex flex-col gap-4">
                                 <button 
@@ -583,7 +582,7 @@
                             <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50 animate-fade-in">
                                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full max-h-[85vh] overflow-y-auto text-left shadow-2xl">
                                     <h2 className="text-2xl font-black text-yellow-400 mb-4 flex justify-between items-center">
-                                        <span>How to Play Cambio</span>
+                                        <span>How to Play</span>
                                         <button onClick={() => setShowRules(false)} className="text-slate-400 hover:text-white text-3xl font-light">&times;</button>
                                     </h2>
                                     <div className="space-y-4 text-slate-200 text-sm">
@@ -625,7 +624,7 @@
             return (
                 <div className="flex flex-col min-h-screen justify-between py-6 select-none">
                     <div className="text-center">
-                        <h1 className="text-4xl font-extrabold tracking-widest text-yellow-400 drop-shadow">CAMBIO</h1>
+                        <h1 className="text-4xl font-extrabold tracking-widest text-yellow-400 drop-shadow">MEMORY CARD GAME</h1>
                         <p className="text-sm text-emerald-200 mt-1">Memory Grid Edition</p>
                     </div>
 
