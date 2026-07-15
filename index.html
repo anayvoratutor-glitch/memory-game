@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Memory Card Game</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
@@ -12,9 +12,13 @@
         .card-transition {
             transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease;
         }
+        /* Prevents pull-to-refresh and extra bouncing on mobile browsers */
+        html, body {
+            overscroll-behavior-y: contain;
+        }
     </style>
 </head>
-<body class="bg-emerald-900 min-h-screen text-white p-4 transition-colors duration-500">
+<body class="bg-emerald-900 min-h-screen text-white p-2 sm:p-4 transition-colors duration-500">
     <div id="root" class="w-full max-w-6xl mx-auto"></div>
 
     <script type="text/babel">
@@ -49,7 +53,7 @@
         }
 
         function App() {
-            const [gameState, setGameState] = useState('menu'); // 'menu', 'player-select', 'setup', 'playing', 'waiting-ready', 'ended'
+            const [gameState, setGameState] = useState('menu'); 
             const [showRules, setShowRules] = useState(false);
             const [playerCount, setPlayerCount] = useState(2);
             const [deck, setDeck] = useState([]);
@@ -66,10 +70,8 @@
             const [matchWindowActive, setMatchWindowActive] = useState(false);
             const [matchCountdown, setMatchCountdown] = useState(0);
             
-            // Turn tracker: stores true/false for each player's readiness in current cycle
             const [readyPlayers, setReadyPlayers] = useState([]); 
 
-            // Animation States
             const [animatingCard, setAnimatingCard] = useState(null);
             const [animatingIndices, setAnimatingIndices] = useState([]);
 
@@ -83,18 +85,14 @@
             const setupGameWithPlayers = (count) => {
                 setPlayerCount(count);
                 const newDeck = createDeck();
-                
-                // Shuffle name options
                 const shuffledNames = [...BOT_NAMES].sort(() => Math.random() - 0.5);
 
                 const generatedPlayers = [];
-                // Player 1 (User)
                 generatedPlayers.push({
                     name: "You",
                     cards: [newDeck.pop(), newDeck.pop(), newDeck.pop(), newDeck.pop()].map((c, i) => ({...c, visible: false, id: `p0-${i}`}))
                 });
 
-                // Add Opponent Bots with fun names
                 for (let i = 1; i < count; i++) {
                     generatedPlayers.push({
                         name: shuffledNames[i - 1] || `Bot P${i + 1}`,
@@ -109,7 +107,7 @@
                 setCurrentPlayer(0);
                 setPeeksLeft(2);
                 setGameState('setup');
-                setMessage("Game Setup: Click 2 of your cards to peek!");
+                setMessage("Setup: Click 2 of your cards to peek!");
                 setScores(null);
                 setShowCalledBy(null);
                 setTurnsAfterShow(0);
@@ -149,7 +147,7 @@
                             
                             setReadyPlayers(new Array(playerCount).fill(false));
                             setGameState('playing');
-                            setMessage("Your turn! Draw from the deck or take from the discard pile.");
+                            setMessage("Your turn! Draw or grab discard.");
                         }, 2000);
                         return 0;
                     }
@@ -163,7 +161,7 @@
                 const card = newDeck.pop();
                 setDeck(newDeck);
                 setActiveCard(card);
-                setMessage(`You drew ${card.value}${card.suit}. Swap it with one of your cards, or discard it to activate its power.`);
+                setMessage(`Drew ${card.value}${card.suit}. Swap with yours, or discard for power.`);
             };
 
             const drawFromDiscard = () => {
@@ -172,7 +170,7 @@
                 const card = newPile.pop();
                 setDiscardPile(newPile);
                 setActiveCard(card);
-                setMessage(`You took ${card.value}${card.suit} from discard. Swap it with one of your cards.`);
+                setMessage(`Took ${card.value}${card.suit} from discard. Swap it with one of your cards.`);
             };
 
             const swapCard = (index) => {
@@ -211,20 +209,20 @@
                     setAnimatingCard(null);
 
                     if (discarded.value === '8') {
-                        setMessage("Power: Click one of YOUR cards to peek!");
+                        setMessage("Power: Tap one of YOUR cards to peek!");
                         setGameState('peek-power');
                     } else if (discarded.value === '10') {
-                        setMessage(`Power: Click one of your OPPONENT'S cards to spy!`);
+                        setMessage(`Power: Tap an OPPONENT'S card to spy!`);
                         setGameState('spy-power');
                     } else if (discarded.value === 'J') {
-                        setMessage("Power: Jack! Go again! Take another turn immediately.");
+                        setMessage("Power: Jack! Take another turn immediately.");
                         setGameState('playing');
                     } else if (discarded.value === 'Q') {
-                        setMessage("Power: Swap any 2 cards. Click the first card.");
+                        setMessage("Power: Swap any 2 cards. Tap the first card.");
                         setGameState('swap-power-1');
                         setSwapSelection([]);
                     } else if (discarded.value === 'K') {
-                        setMessage("Power: King! Click an opponent's card to look at it first.");
+                        setMessage("Power: King! Tap an opponent's card to peek first.");
                         setGameState('king-look');
                     } else {
                         triggerMatchWindow(() => {
@@ -237,7 +235,7 @@
             const enterMatchMode = () => {
                 if (discardPile.length === 0) return;
                 setGameState('match-mode');
-                setMessage("MATCH RULE: Click the card on the table that matches the top discard card!");
+                setMessage("MATCH: Tap the card on table matching the top discard!");
             };
 
             const handleMatchAttempt = (pIdx, cIdx) => {
@@ -253,7 +251,7 @@
                     setAnimatingIndices([{ playerIdx: pIdx, cardIdx: cIdx, action: 'burn' }]);
 
                     setTimeout(() => {
-                        setMessage(`CORRECT MATCH! The ${targetCard.value}${targetCard.suit} has been burned!`);
+                        setMessage(`CORRECT! The ${targetCard.value}${targetCard.suit} has been burned!`);
                         const updatedPlayers = JSON.parse(JSON.stringify(players));
                         updatedPlayers[pIdx].cards[cIdx] = null;
                         
@@ -298,7 +296,7 @@
                     clearTimers();
                     setMatchWindowActive(false);
 
-                    setMessage(`WRONG! Penalty: You must draw an extra card!`);
+                    setMessage(`WRONG! Penalty: Drew an extra card!`);
                     const newDeck = [...deck];
                     const penaltyCard = newDeck.pop();
                     const updatedPlayers = JSON.parse(JSON.stringify(players));
@@ -317,13 +315,13 @@
                 setMatchWindowActive(true);
                 let timeLeft = 4;
                 setMatchCountdown(timeLeft);
-                setMessage(`Anyone can Match! Countdown: ${timeLeft}s... Click "Match Card!" quickly!`);
+                setMessage(`Anyone can Match! (${timeLeft}s)... Tap "Match Card!"`);
 
                 countdownIntervalRef.current = setInterval(() => {
                     timeLeft -= 1;
                     setMatchCountdown(timeLeft);
                     if (timeLeft > 0) {
-                        setMessage(`Anyone can Match! Countdown: ${timeLeft}s... Click "Match Card!" quickly!`);
+                        setMessage(`Anyone can Match! (${timeLeft}s)... Tap "Match Card!"`);
                     } else {
                         clearInterval(countdownIntervalRef.current);
                         setMatchWindowActive(false);
@@ -370,7 +368,7 @@
 
                 if (gameState === 'swap-power-1') {
                     setSwapSelection([{ playerIdx: pIdx, cardIdx: cIdx }]);
-                    setMessage("Now click the second card to swap.");
+                    setMessage("Tap the second card to swap.");
                     setGameState('swap-power-2');
                 } else if (gameState === 'swap-power-2') {
                     const first = swapSelection[0];
@@ -379,12 +377,12 @@
 
                 if (gameState === 'king-look' && pIdx !== 0) {
                     revealTemp(pIdx, cIdx, () => {
-                        setMessage("Now swap any 2 cards. Click the first card.");
+                        setMessage("Now swap any 2 cards. Tap the first card.");
                         setGameState('king-swap-1');
                     });
                 } else if (gameState === 'king-swap-1') {
                     setSwapSelection([{ playerIdx: pIdx, cardIdx: cIdx }]);
-                    setMessage("Click the second card to swap.");
+                    setMessage("Tap the second card to swap.");
                     setGameState('king-swap-2');
                 } else if (gameState === 'king-swap-2') {
                     const first = swapSelection[0];
@@ -432,11 +430,6 @@
                 }, 2000);
             };
 
-            // COUNTER-CLOCKWISE Rotation Mapper
-            // We map indices differently to force counter-clockwise play around the table:
-            // 2 Players: 0 -> 1 -> 0
-            // 3 Players: 0 (You) -> 2 (P3 - Top Right) -> 1 (P2 - Left) -> 0
-            // 4 Players: 0 (You) -> 2 (P3 - Top Right) -> 1 (P2 - Left) -> 3 (P4 - Bottom Left) -> 0
             const getNextPlayerCCW = (current) => {
                 if (playerCount === 2) {
                     return current === 0 ? 1 : 0;
@@ -444,7 +437,7 @@
                     if (current === 0) return 2;
                     if (current === 2) return 1;
                     return 0;
-                } else { // 4 players
+                } else { 
                     if (current === 0) return 2;
                     if (current === 2) return 1;
                     if (current === 1) return 3;
@@ -469,14 +462,13 @@
                 setGameState('waiting-ready');
                 const nextPlayerIdx = getNextPlayerCCW(currentPlayer);
                 const nextName = nextPlayerIdx === 0 ? "your" : `${players[nextPlayerIdx].name}'s`;
-                setMessage(`Turn actions complete! Press 'Next Turn' to advance.`);
+                setMessage(`Turn actions complete!`);
             };
 
             const handleReadyNextTurn = () => {
                 const nextPlayer = getNextPlayerCCW(currentPlayer);
                 setCurrentPlayer(nextPlayer);
                 
-                // If cycling back to you (0), reset all lights to red
                 if (nextPlayer === 0) {
                     setReadyPlayers(new Array(playerCount).fill(false));
                 }
@@ -512,19 +504,19 @@
                     
                     aiTimerRef.current = setTimeout(() => {
                         if (drawn.value === '8') {
-                            setMessage(`${players[botIdx].name} peeked at their own card.`);
+                            setMessage(`${players[botIdx].name} peeked at their card.`);
                             triggerMatchWindow(() => completeAITurn(botIdx));
                         } else if (drawn.value === '10') {
                             const otherPlayers = targetablePlayers.filter(tp => tp.playerIdx !== botIdx);
                             const randomTarget = otherPlayers[Math.floor(Math.random() * otherPlayers.length)];
-                            setMessage(`${players[botIdx].name} spied on ${players[randomTarget.playerIdx].name}'s card.`);
+                            setMessage(`${players[botIdx].name} spied on ${players[randomTarget.playerIdx].name}.`);
                             triggerMatchWindow(() => completeAITurn(botIdx));
                         } else if (drawn.value === 'J') {
                             if (!isExtraTurn) {
-                                setMessage(`${players[botIdx].name} plays again! (Jack Power)`);
+                                setMessage(`${players[botIdx].name} plays again!`);
                                 aiTimerRef.current = setTimeout(() => { executeAITurn(botIdx, true); }, 1500); 
                             } else {
-                                setMessage(`${players[botIdx].name} plays another Jack, but cannot chain extra turns!`);
+                                setMessage(`${players[botIdx].name} discarded Jack!`);
                                 triggerMatchWindow(() => completeAITurn(botIdx));
                             }
                         } else if (drawn.value === 'Q' || drawn.value === 'K') {
@@ -556,7 +548,7 @@
                             nextPlayers[botIdx].cards = botCards;
                             setPlayers(nextPlayers);
                             setAnimatingIndices([]);
-                            setMessage(`${players[botIdx].name} swapped a card.`);
+                            setMessage(`${players[botIdx].name} swapped.`);
                             triggerMatchWindow(() => completeAITurn(botIdx));
                         }, 350);
                     } else {
@@ -572,7 +564,7 @@
 
                 const botScore = players[botIdx].cards.reduce((sum, c) => sum + getCardPoints(c), 0);
                 if (botScore <= 5 && showCalledBy === null) {
-                    setMessage(`${players[botIdx].name} yelled SHOW! Final turn cycle!`);
+                    setMessage(`${players[botIdx].name} yelled SHOW!`);
                     setShowCalledBy(botIdx);
                     setGameState('waiting-ready');
                 } else {
@@ -587,8 +579,7 @@
                     } else {
                         setGameState('waiting-ready');
                         const nextPlayerIdx = getNextPlayerCCW(currentPlayer);
-                        const nextName = nextPlayerIdx === 0 ? "your" : `${players[nextPlayerIdx].name}'s`;
-                        setMessage(`${players[botIdx].name} turn over. Click 'Next Turn' to advance.`);
+                        setMessage(`${players[botIdx].name} finished turn.`);
                     }
                 }
             };
@@ -596,7 +587,7 @@
             const callShow = () => {
                 if (showCalledBy !== null) return;
                 setShowCalledBy(0);
-                setMessage("You yelled SHOW! Other players get one final turn.");
+                setMessage("You called SHOW! Final round starts.");
                 prepareNextTurn();
             };
 
@@ -620,7 +611,7 @@
                     if (score === minScore) winners.push(idx === 0 ? "You" : players[idx].name);
                 });
 
-                setMessage(`Game Over! Winner: ${winners.join(" & ")} with ${minScore} points!`);
+                setMessage(`Winner: ${winners.join(" & ")} with ${minScore} points!`);
             };
 
             const getActiveCount = (playerIdx) => {
@@ -648,68 +639,56 @@
                 return `${completed}/${playerCount} Ready`;
             };
 
-            // Main Menu Screen
             if (gameState === 'menu') {
                 return (
-                    <div className="flex flex-col items-center justify-center min-h-screen text-center px-4">
-                        <div className="bg-emerald-950/80 border border-emerald-800 p-8 rounded-3xl shadow-2xl max-w-md w-full backdrop-blur-md">
-                            <h1 className="text-4xl font-extrabold tracking-widest text-yellow-400 drop-shadow mb-2 leading-snug">MEMORY CARD GAME</h1>
-                            <p className="text-emerald-200 text-sm mb-8">Ultimate Memory Grid Experience</p>
+                    <div className="flex flex-col items-center justify-center min-h-[90vh] text-center px-4">
+                        <div className="bg-emerald-950/80 border border-emerald-800 p-6 rounded-3xl shadow-2xl max-w-sm w-full backdrop-blur-md">
+                            <h1 className="text-3xl font-extrabold tracking-wider text-yellow-400 drop-shadow mb-1 leading-snug">MEMORY CARD GAME</h1>
+                            <p className="text-emerald-200 text-xs mb-6">Ultimate Memory Grid Experience</p>
                             
-                            <div className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-3">
                                 <button 
                                     onClick={handleStartClick}
-                                    className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black py-4 px-8 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95 text-lg"
+                                    className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black py-3 px-6 rounded-xl shadow-lg text-md transition-all duration-300"
                                 >
                                     🎮 START GAME
                                 </button>
                                 
                                 <button 
                                     onClick={() => setShowRules(true)}
-                                    className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-xl border border-emerald-600 transition-all duration-300 transform hover:scale-105 active:scale-95"
+                                    className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl border border-emerald-600 text-sm transition-all duration-300"
                                 >
-                                    📖 RULES & HOW TO PLAY
+                                    📖 HOW TO PLAY
                                 </button>
                             </div>
                         </div>
 
-                        {/* Rules Popup */}
                         {showRules && (
                             <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
-                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full max-h-[85vh] overflow-y-auto text-left shadow-2xl">
-                                    <h2 className="text-2xl font-black text-yellow-400 mb-4 flex justify-between items-center">
-                                        <span>How to Play</span>
-                                        <button onClick={() => setShowRules(false)} className="text-slate-400 hover:text-white text-3xl font-light">&times;</button>
+                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 max-w-sm w-full max-h-[80vh] overflow-y-auto text-left shadow-2xl">
+                                    <h2 className="text-xl font-black text-yellow-400 mb-3 flex justify-between items-center">
+                                        <span>Rules</span>
+                                        <button onClick={() => setShowRules(false)} className="text-slate-400 text-2xl">&times;</button>
                                     </h2>
-                                    <div className="space-y-4 text-slate-200 text-sm">
-                                        <p><strong>The Goal:</strong> Have the <strong>lowest</strong> total hand score when someone calls "Show!"</p>
+                                    <div className="space-y-3 text-slate-200 text-xs">
+                                        <p><strong>Goal:</strong> Have the <strong>lowest</strong> total score when someone calls "Show!"</p>
                                         <hr className="border-slate-800" />
-                                        <p><strong>Setup:</strong> You start with 4 face-down cards. You may peek at 2 of them to memorize their values.</p>
-                                        <hr className="border-slate-800" />
-                                        <p><strong>Turn Actions:</strong> Draw a card from the deck or grab the face-up discard pile. Swap it with one of yours, or discard it directly.</p>
+                                        <p><strong>Setup:</strong> You start with 4 cards. Tap 2 of yours to peek and memorize them.</p>
                                         <hr className="border-slate-800" />
                                         <div>
-                                            <p className="font-bold text-yellow-400 mb-1">Card Powers (Triggered when Discarded):</p>
-                                            <ul className="list-disc list-inside space-y-1 text-slate-300">
+                                            <p className="font-bold text-yellow-400">Card Powers (Discarded):</p>
+                                            <ul className="list-disc list-inside space-y-0.5 text-slate-300">
                                                 <li><strong>8:</strong> Peek at one of your cards.</li>
-                                                <li><strong>10:</strong> Spy on one of your opponent's cards.</li>
+                                                <li><strong>10:</strong> Spy on an opponent's card.</li>
                                                 <li><strong>Jack:</strong> Go again (extra turn).</li>
-                                                <li><strong>Queen:</strong> Swap any two cards on the board.</li>
-                                                <li><strong>King:</strong> Look at an opponent's card, then choose to swap any 2.</li>
+                                                <li><strong>Queen:</strong> Swap any two cards.</li>
+                                                <li><strong>King:</strong> Look at opponent's card, then swap.</li>
                                             </ul>
                                         </div>
                                         <hr className="border-slate-800" />
-                                        <div>
-                                            <p className="font-bold text-yellow-400 mb-1">🔥 Match / Burn Rule:</p>
-                                            <p>When any card is placed on top of the discard pile, if you have a card with the **same number value**, hit **Match Card** and tap your card to burn it permanently. Correct matches let you get rid of a card! If you match an opponent's card correctly, you can transfer one of yours to them!</p>
-                                        </div>
+                                        <p><strong>Match Rule:</strong> If your card matches top discard, tap **Match Card** to burn it! Correct matches let you transfer a card to opponents!</p>
                                     </div>
-                                    <button 
-                                        onClick={() => setShowRules(false)}
-                                        className="mt-6 w-full bg-yellow-500 text-slate-950 font-bold py-3 rounded-xl hover:bg-yellow-400 transition-all"
-                                    >
-                                        Got It! Let's Play
-                                    </button>
+                                    <button onClick={() => setShowRules(false)} className="mt-4 w-full bg-yellow-500 text-slate-950 font-bold py-2.5 rounded-xl">Got It!</button>
                                 </div>
                             </div>
                         )}
@@ -717,64 +696,56 @@
                 );
             }
 
-            // Player Count Selector Screen
             if (gameState === 'player-select') {
                 return (
-                    <div className="flex flex-col items-center justify-center min-h-screen text-center px-4">
-                        <div className="bg-emerald-950/80 border border-emerald-800 p-8 rounded-3xl shadow-2xl max-w-md w-full backdrop-blur-md">
-                            <h2 className="text-3xl font-black text-yellow-400 mb-2">Number of Players</h2>
-                            <p className="text-emerald-200 text-sm mb-6">Choose how many opponents you want to face.</p>
+                    <div className="flex flex-col items-center justify-center min-h-[90vh] text-center px-4">
+                        <div className="bg-emerald-950/80 border border-emerald-800 p-6 rounded-3xl shadow-2xl max-w-sm w-full backdrop-blur-md">
+                            <h2 className="text-2xl font-black text-yellow-400 mb-1">Players</h2>
+                            <p className="text-emerald-200 text-xs mb-5">Select player count</p>
                             
-                            <div className="grid grid-cols-3 gap-4">
+                            <div className="grid grid-cols-3 gap-3">
                                 {[2, 3, 4].map(num => (
                                     <button 
                                         key={num}
                                         onClick={() => setupGameWithPlayers(num)}
-                                        className="bg-emerald-800 hover:bg-yellow-500 hover:text-slate-950 text-white font-black py-4 rounded-2xl shadow-lg border border-emerald-600 transition-all duration-300 text-2xl transform hover:scale-105 active:scale-95"
+                                        className="bg-emerald-800 hover:bg-yellow-500 hover:text-slate-950 text-white font-black py-3 rounded-xl border border-emerald-600 text-xl transition-all duration-300"
                                     >
                                         {num}
                                     </button>
                                 ))}
                             </div>
-
-                            <button 
-                                onClick={() => setGameState('menu')}
-                                className="mt-8 text-emerald-400 hover:text-white text-sm underline underline-offset-4"
-                            >
-                                Back to Main Menu
-                            </button>
+                            <button onClick={() => setGameState('menu')} className="mt-6 text-emerald-400 text-xs underline">Back</button>
                         </div>
                     </div>
                 );
             }
 
             return (
-                <div className="flex flex-col min-h-screen justify-between py-6 select-none">
-                    <div className="text-center">
-                        <h1 className="text-4xl font-extrabold tracking-widest text-yellow-400 drop-shadow">MEMORY CARD GAME</h1>
-                        <p className="text-sm text-emerald-200 mt-1">{playerCount} Players | Counter-Clockwise Rotation 🔄</p>
+                <div className="flex flex-col min-h-[95vh] justify-between py-2 select-none">
+                    <div className="text-center mb-1">
+                        <h1 className="text-xl font-extrabold text-yellow-400 drop-shadow tracking-wider">MEMORY GRID</h1>
                     </div>
 
-                    {/* Multi-Player Dynamic Hands Grid */}
-                    <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-6 my-6 items-center">
+                    {/* Highly Responsive Screen-Fitting Grid */}
+                    <div className="w-full flex flex-col md:grid md:grid-cols-3 gap-3 my-1 items-center justify-center">
                         
-                        {/* Column 1: Opponents (Bots P2 & P4) */}
-                        <div className="flex flex-col gap-6 items-center">
+                        {/* LEFT COLUMN: Opponents (P2 & P4) */}
+                        <div className="flex flex-row md:flex-col gap-2 w-full justify-center items-center">
                             {/* P2 (Left Side) */}
                             {players[1] && (
-                                <div className={`flex flex-col items-center bg-emerald-800/50 p-4 rounded-xl border w-72 transition-all duration-300 ${currentPlayer === 1 ? 'border-yellow-400 ring-2 ring-yellow-400 animate-pulse' : 'border-emerald-700'}`}>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className={`w-3 h-3 rounded-full ${readyPlayers[1] ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-red-500'}`}></div>
-                                        <h2 className="text-md font-semibold text-red-300">{players[1].name} ({getActiveCount(1)} Cards)</h2>
+                                <div className={`flex flex-col items-center bg-emerald-800/40 p-2 rounded-xl border w-[46%] md:w-64 transition-all duration-300 ${currentPlayer === 1 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                    <div className="flex items-center gap-1.5 mb-1">
+                                        <div className={`w-2 h-2 rounded-full ${readyPlayers[1] ? 'bg-green-500 shadow-[0_0_6px_#22c55e]' : 'bg-red-500'}`}></div>
+                                        <h2 className="text-xs font-semibold text-red-300 truncate max-w-[90px]">{players[1].name}</h2>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-2 gap-1.5">
                                         {players[1].cards.map((card, idx) => {
-                                            if (!card) return <div key={idx} className="w-16 h-24 rounded-lg border-2 border-dashed border-emerald-800/40 opacity-40"></div>;
+                                            if (!card) return <div key={idx} className="w-10 h-14 md:w-14 md:h-20 rounded-md border border-dashed border-emerald-800/40 opacity-30"></div>;
                                             return (
                                                 <div 
                                                     key={card.id || idx} 
                                                     onClick={() => handleCardClick(1, idx)}
-                                                    className={`w-16 h-24 rounded-lg flex items-center justify-center font-bold text-lg cursor-pointer border-2 card-transition transform hover:scale-105 shadow-md ${
+                                                    className={`w-10 h-14 md:w-14 md:h-20 rounded-md flex items-center justify-center font-bold text-sm md:text-md cursor-pointer border card-transition transform active:scale-95 shadow-sm ${
                                                         card.visible ? 'bg-white text-black border-yellow-400' : 'bg-blue-800 border-white text-white'
                                                     } ${getAnimationClass(1, idx)}`}
                                                 >
@@ -786,21 +757,21 @@
                                 </div>
                             )}
 
-                            {/* P4 (Only appears in 4 player mode - Bottom Left) */}
+                            {/* P4 (Bottom Left / 4 players) */}
                             {players[3] && (
-                                <div className={`flex flex-col items-center bg-emerald-800/50 p-4 rounded-xl border w-72 transition-all duration-300 ${currentPlayer === 3 ? 'border-yellow-400 ring-2 ring-yellow-400 animate-pulse' : 'border-emerald-700'}`}>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className={`w-3 h-3 rounded-full ${readyPlayers[3] ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-red-500'}`}></div>
-                                        <h2 className="text-md font-semibold text-purple-300">{players[3].name} ({getActiveCount(3)} Cards)</h2>
+                                <div className={`flex flex-col items-center bg-emerald-800/40 p-2 rounded-xl border w-[46%] md:w-64 transition-all duration-300 ${currentPlayer === 3 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                    <div className="flex items-center gap-1.5 mb-1">
+                                        <div className={`w-2 h-2 rounded-full ${readyPlayers[3] ? 'bg-green-500 shadow-[0_0_6px_#22c55e]' : 'bg-red-500'}`}></div>
+                                        <h2 className="text-xs font-semibold text-purple-300 truncate max-w-[90px]">{players[3].name}</h2>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-2 gap-1.5">
                                         {players[3].cards.map((card, idx) => {
-                                            if (!card) return <div key={idx} className="w-16 h-24 rounded-lg border-2 border-dashed border-emerald-800/40 opacity-40"></div>;
+                                            if (!card) return <div key={idx} className="w-10 h-14 md:w-14 md:h-20 rounded-md border border-dashed border-emerald-800/40 opacity-30"></div>;
                                             return (
                                                 <div 
                                                     key={card.id || idx} 
                                                     onClick={() => handleCardClick(3, idx)}
-                                                    className={`w-16 h-24 rounded-lg flex items-center justify-center font-bold text-lg cursor-pointer border-2 card-transition transform hover:scale-105 shadow-md ${
+                                                    className={`w-10 h-14 md:w-14 md:h-20 rounded-md flex items-center justify-center font-bold text-sm md:text-md cursor-pointer border card-transition transform active:scale-95 shadow-sm ${
                                                         card.visible ? 'bg-white text-black border-yellow-400' : 'bg-blue-800 border-white text-white'
                                                     } ${getAnimationClass(3, idx)}`}
                                                 >
@@ -813,20 +784,20 @@
                             )}
                         </div>
 
-                        {/* Column 2: Draw & Discard Piles */}
-                        <div className="flex flex-col items-center gap-4 bg-emerald-950/60 p-5 rounded-2xl border border-emerald-800">
-                            <div className="flex gap-6 relative">
+                        {/* CENTER COLUMN: Pile & Center Interactions */}
+                        <div className="flex flex-col items-center gap-2 bg-emerald-950/60 p-3 rounded-2xl border border-emerald-800 w-full max-w-sm md:max-w-xs mx-auto">
+                            <div className="flex gap-4 justify-center items-center">
                                 <button 
                                     onClick={drawFromDeck} 
                                     disabled={gameState !== 'playing' || activeCard || currentPlayer !== 0 || matchWindowActive}
-                                    className="w-20 h-28 bg-red-800 border-2 border-white rounded-lg flex items-center justify-center font-bold text-white hover:bg-red-700 disabled:opacity-30 disabled:scale-95 text-3xl transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md"
+                                    className="w-14 h-20 md:w-16 md:h-24 bg-red-800 border border-white rounded-lg flex items-center justify-center font-bold text-white disabled:opacity-30 text-2xl transition-all duration-300 active:scale-95 shadow-md"
                                 >
                                     🂠
                                 </button>
                                 <button 
                                     onClick={drawFromDiscard}
                                     disabled={gameState !== 'playing' || activeCard || discardPile.length === 0 || currentPlayer !== 0 || matchWindowActive}
-                                    className="w-20 h-28 bg-white text-black border-2 border-yellow-400 rounded-lg flex items-center justify-center font-bold text-xl disabled:opacity-30 disabled:scale-95 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md"
+                                    className="w-14 h-20 md:w-16 md:h-24 bg-white text-black border border-yellow-400 rounded-lg flex items-center justify-center font-bold text-md md:text-lg disabled:opacity-30 transition-all duration-300 active:scale-95 shadow-md"
                                 >
                                     {discardPile.length > 0 ? `${discardPile[discardPile.length - 1].value}${discardPile[discardPile.length - 1].suit}` : "Empty"}
                                 </button>
@@ -835,47 +806,45 @@
                             <button
                                 onClick={enterMatchMode}
                                 disabled={discardPile.length === 0 || gameState === 'setup' || gameState === 'ended'}
-                                className={`w-full text-white font-extrabold py-2 px-4 rounded-lg transition-all duration-300 transform active:scale-95 ${
+                                className={`w-full text-white font-extrabold py-1.5 px-3 rounded-lg text-xs transition-all duration-300 ${
                                     matchWindowActive 
-                                        ? 'bg-yellow-500 hover:bg-yellow-400 text-slate-900 animate-pulse ring-4 ring-yellow-300 scale-105' 
+                                        ? 'bg-yellow-500 text-slate-900 animate-pulse ring-2 ring-yellow-300' 
                                         : 'bg-red-600 hover:bg-red-500 disabled:opacity-50'
                                 }`}
                             >
-                                {matchWindowActive ? `🔥 Match Card! (${matchCountdown}s)` : "🔥 Match Card!"}
+                                {matchWindowActive ? `🔥 Match! (${matchCountdown}s)` : "🔥 Match Card!"}
                             </button>
 
                             {activeCard && (
-                                <div className="flex flex-col items-center border-t border-emerald-800 pt-3 w-full transition-all duration-300">
-                                    <div className={`w-16 h-24 bg-white text-black border-2 border-yellow-400 rounded-lg flex flex-col items-center justify-center font-bold text-lg transition-all duration-350 ease-out transform scale-110 shadow-xl ${
-                                        animatingCard?.type === 'discard' ? 'translate-y-[-100px] opacity-0 scale-50' : ''
-                                    } ${activeCard.isRed ? 'text-red-600' : 'text-black'}`}>
+                                <div className="flex items-center gap-3 border-t border-emerald-800 pt-2 w-full justify-center">
+                                    <div className="w-10 h-14 md:w-12 md:h-18 bg-white text-black border border-yellow-400 rounded-lg flex flex-col items-center justify-center font-bold text-xs shadow-md">
                                         <div>{activeCard.value}</div>
-                                        <div className="text-2xl">{activeCard.suit}</div>
+                                        <div className="text-md">{activeCard.suit}</div>
                                     </div>
-                                    <button onClick={discardActive} className="mt-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs py-1 px-3 rounded transition-all duration-300 active:scale-90">
+                                    <button onClick={discardActive} className="bg-red-600 hover:bg-red-700 text-white font-bold text-2xs py-1 px-3 rounded active:scale-90">
                                         Discard
                                     </button>
                                 </div>
                             )}
                         </div>
 
-                        {/* Column 3: Opponent P3 (Top Right) & Player P1 (Bottom Right) */}
-                        <div className="flex flex-col gap-6 items-center">
+                        {/* RIGHT COLUMN: P3 (Top Right) & You (P1 - Bottom Right) */}
+                        <div className="flex flex-row md:flex-col gap-2 w-full justify-center items-center">
                             {/* P3 (Top Right) */}
                             {players[2] && (
-                                <div className={`flex flex-col items-center bg-emerald-800/50 p-4 rounded-xl border w-72 transition-all duration-300 ${currentPlayer === 2 ? 'border-yellow-400 ring-2 ring-yellow-400 animate-pulse' : 'border-emerald-700'}`}>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className={`w-3 h-3 rounded-full ${readyPlayers[2] ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-red-500'}`}></div>
-                                        <h2 className="text-md font-semibold text-pink-300">{players[2].name} ({getActiveCount(2)} Cards)</h2>
+                                <div className={`flex flex-col items-center bg-emerald-800/40 p-2 rounded-xl border w-[46%] md:w-64 transition-all duration-300 ${currentPlayer === 2 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                    <div className="flex items-center gap-1.5 mb-1">
+                                        <div className={`w-2 h-2 rounded-full ${readyPlayers[2] ? 'bg-green-500 shadow-[0_0_6px_#22c55e]' : 'bg-red-500'}`}></div>
+                                        <h2 className="text-xs font-semibold text-pink-300 truncate max-w-[90px]">{players[2].name}</h2>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-2 gap-1.5">
                                         {players[2].cards.map((card, idx) => {
-                                            if (!card) return <div key={idx} className="w-16 h-24 rounded-lg border-2 border-dashed border-emerald-800/40 opacity-40"></div>;
+                                            if (!card) return <div key={idx} className="w-10 h-14 md:w-14 md:h-20 rounded-md border border-dashed border-emerald-800/40 opacity-30"></div>;
                                             return (
                                                 <div 
                                                     key={card.id || idx} 
                                                     onClick={() => handleCardClick(2, idx)}
-                                                    className={`w-16 h-24 rounded-lg flex items-center justify-center font-bold text-lg cursor-pointer border-2 card-transition transform hover:scale-105 shadow-md ${
+                                                    className={`w-10 h-14 md:w-14 md:h-20 rounded-md flex items-center justify-center font-bold text-sm md:text-md cursor-pointer border card-transition transform active:scale-95 shadow-sm ${
                                                         card.visible ? 'bg-white text-black border-yellow-400' : 'bg-blue-800 border-white text-white'
                                                     } ${getAnimationClass(2, idx)}`}
                                                 >
@@ -889,19 +858,19 @@
 
                             {/* P1 (User - Bottom Right) */}
                             {players[0] && (
-                                <div className={`flex flex-col items-center bg-emerald-800/50 p-4 rounded-xl border w-72 transition-all duration-300 ${currentPlayer === 0 ? 'border-yellow-400 ring-2 ring-yellow-400 animate-pulse' : 'border-emerald-700'}`}>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className={`w-3 h-3 rounded-full ${readyPlayers[0] ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-red-500'}`}></div>
-                                        <h2 className="text-md font-semibold text-green-300">Your Hand ({getActiveCount(0)} Cards)</h2>
+                                <div className={`flex flex-col items-center bg-emerald-800/45 p-2 rounded-xl border w-[46%] md:w-64 transition-all duration-300 ${currentPlayer === 0 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                    <div className="flex items-center gap-1.5 mb-1">
+                                        <div className={`w-2 h-2 rounded-full ${readyPlayers[0] ? 'bg-green-500 shadow-[0_0_6px_#22c55e]' : 'bg-red-500'}`}></div>
+                                        <h2 className="text-xs font-semibold text-green-300">You</h2>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-2 gap-1.5">
                                         {players[0].cards.map((card, idx) => {
-                                            if (!card) return <div key={idx} className="w-16 h-24 rounded-lg border-2 border-dashed border-emerald-800/40 opacity-40"></div>;
+                                            if (!card) return <div key={idx} className="w-10 h-14 md:w-14 md:h-20 rounded-md border border-dashed border-emerald-800/40 opacity-30"></div>;
                                             return (
                                                 <div 
                                                     key={card.id || idx} 
                                                     onClick={() => handleCardClick(0, idx)}
-                                                    className={`w-16 h-24 rounded-lg flex items-center justify-center font-bold text-lg cursor-pointer border-2 card-transition transform hover:scale-105 hover:-translate-y-1 shadow-md ${
+                                                    className={`w-10 h-14 md:w-14 md:h-20 rounded-md flex items-center justify-center font-bold text-sm md:text-md cursor-pointer border card-transition transform active:scale-95 shadow-sm ${
                                                         card.visible || (activeCard && gameState === 'playing')
                                                             ? 'bg-white text-black border-yellow-400' 
                                                             : 'bg-red-800 border-white text-white'
@@ -918,41 +887,42 @@
 
                     </div>
 
-                    {/* Ready & Info Turn Box */}
-                    <div className="w-full max-w-xl mx-auto flex flex-col items-center gap-3 bg-black/40 border border-emerald-800 rounded-2xl p-4 text-center my-4 transition-all duration-300">
+                    {/* Turn Tracker and Info Box */}
+                    <div className="w-full max-w-sm mx-auto flex flex-col items-center gap-1.5 bg-black/40 border border-emerald-800 rounded-2xl p-2 text-center my-1">
                         {gameState !== 'setup' && (
-                            <div className="bg-emerald-950 px-3 py-1 rounded-full text-xs font-black tracking-widest text-yellow-400 border border-emerald-800 flex items-center gap-2">
-                                🔄 Rotation: {getReadyCountFraction()}
+                            <div className="bg-emerald-950 px-2.5 py-0.5 rounded-full text-3xs font-black tracking-widest text-yellow-400 border border-emerald-800">
+                                🔄 {getReadyCountFraction()}
                             </div>
                         )}
-                        <p className="text-md font-medium text-white">{message}</p>
+                        <p className="text-xs text-slate-100 font-medium px-2">{message}</p>
                         
                         {gameState === 'waiting-ready' && (
                             <button
                                 onClick={handleReadyNextTurn}
-                                className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black py-3 px-8 rounded-xl shadow-lg transform transition-all duration-300 hover:scale-105 active:scale-95"
+                                className="bg-yellow-500 text-slate-950 font-black py-2 px-6 rounded-lg text-xs shadow-md transition-all duration-300 active:scale-95"
                             >
                                 NEXT TURN 👉
                             </button>
                         )}
                     </div>
 
-                    <div className="w-full flex flex-col sm:flex-row justify-between items-center bg-emerald-950 p-4 rounded-xl gap-4">
-                        <div className="flex gap-4">
-                            <button onClick={() => setGameState('menu')} className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-2 px-6 rounded-lg">Menu</button>
-                            <button onClick={handleStartClick} className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-extrabold py-2 px-6 rounded-lg">Restart</button>
-                            <button onClick={callShow} disabled={gameState !== 'playing' || showCalledBy !== null || matchWindowActive} className="bg-orange-600 hover:bg-orange-500 text-white font-extrabold py-2 px-6 rounded-lg disabled:opacity-50">Show!</button>
+                    {/* Bottom Utility Bar */}
+                    <div className="w-full flex flex-row justify-between items-center bg-emerald-950 p-2.5 rounded-xl gap-2 text-xs">
+                        <div className="flex gap-2">
+                            <button onClick={() => setGameState('menu')} className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-1 px-3 rounded-lg">Menu</button>
+                            <button onClick={handleStartClick} className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-extrabold py-1 px-3 rounded-lg">Restart</button>
+                            <button onClick={callShow} disabled={gameState !== 'playing' || showCalledBy !== null || matchWindowActive} className="bg-orange-600 hover:bg-orange-500 text-white font-extrabold py-1 px-3 rounded-lg disabled:opacity-50">Show!</button>
                         </div>
                         {scores ? (
-                            <div className="flex flex-wrap gap-4 text-sm font-bold justify-center">
+                            <div className="flex gap-2 text-2xs font-bold truncate max-w-[150px]">
                                 {scores.map((score, idx) => (
                                     <span key={idx} className={idx === 0 ? "text-green-300" : "text-red-300"}>
-                                        {idx === 0 ? "You" : players[idx].name}: {score}
+                                        {idx === 0 ? "You" : `P${idx}`}:{score}
                                     </span>
                                 ))}
                             </div>
                         ) : (
-                            <div className="text-xs text-emerald-400">Joker (-1) | 7 (0) | J (11) | Q (12) | K (13)</div>
+                            <div className="text-3xs text-emerald-400 hidden sm:block">Joker (-1) | 7 (0) | J (11) | Q (12) | K (13)</div>
                         )}
                     </div>
                 </div>
