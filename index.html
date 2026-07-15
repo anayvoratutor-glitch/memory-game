@@ -12,47 +12,74 @@
         .card-transition {
             transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease;
         }
-        /* Prevents pull-to-refresh and extra bouncing on mobile browsers */
+        
+        /* Disable bounce-scrolling entirely to lock screen space */
         html, body {
             overscroll-behavior-y: contain;
-            overflow: hidden; /* Lock viewport scrolling entirely */
+            overflow: hidden;
+            height: 100%;
         }
 
-        /* 🚨 LANDSCAPE / SHORT SCREEN OPTIMIZATIONS 🚨 */
-        @media (max-height: 500px) {
-            .landscape-hide {
+        /* 🚀 FLUID ADAPTIVE CARD SIZING 🚀 */
+        .card-fluid {
+            /* Default: Mobile portrait size */
+            width: 12vw;
+            height: 17vw;
+            max-width: 64px;
+            max-height: 90px;
+            min-width: 40px;
+            min-height: 56px;
+            font-size: 0.875rem;
+        }
+
+        .pile-fluid {
+            width: 14vw;
+            height: 20vw;
+            max-width: 76px;
+            max-height: 106px;
+            min-width: 46px;
+            min-height: 64px;
+        }
+
+        /* Laptop & Large Screens */
+        @media (min-width: 1024px) {
+            .card-fluid {
+                width: 5.5rem;
+                height: 8rem;
+                max-width: none;
+                max-height: none;
+                font-size: 1.25rem;
+            }
+            .pile-fluid {
+                width: 6.5rem;
+                height: 9.5rem;
+                max-width: none;
+                max-height: none;
+            }
+        }
+
+        /* Mobile Landscape (Short screens) */
+        @media (max-height: 480px) {
+            .card-fluid {
+                width: 9vh;
+                height: 13vh;
+                font-size: 0.75rem;
+            }
+            .pile-fluid {
+                width: 11vh;
+                height: 16vh;
+            }
+            .hide-on-short {
                 display: none !important;
             }
-            .landscape-row {
-                flex-direction: row !important;
-                justify-content: space-around !important;
-                align-items: center !important;
-                gap: 0.25rem !important;
-            }
-            .landscape-card {
-                width: 2.25rem !important; /* ~36px */
-                height: 3.25rem !important; /* ~52px */
-                font-size: 0.75rem !important;
-            }
-            .landscape-pile {
-                width: 3rem !important;
-                height: 4.25rem !important;
-            }
-            .landscape-box {
-                padding: 0.25rem !important;
-                margin-top: 0.25rem !important;
-                margin-bottom: 0.25rem !important;
-            }
-            .landscape-container {
-                min-height: 98vh !important;
-                padding-top: 0.25rem !important;
-                padding-bottom: 0.25rem !important;
+            .tight-padding {
+                padding: 0.15rem !important;
             }
         }
     </style>
 </head>
-<body class="bg-emerald-900 min-h-screen text-white p-2 sm:p-4 transition-colors duration-500">
-    <div id="root" class="w-full max-w-6xl mx-auto"></div>
+<body class="bg-emerald-900 text-white p-1 sm:p-4 transition-colors duration-500 h-full flex flex-col justify-center">
+    <div id="root" class="w-full max-w-6xl mx-auto h-full flex flex-col justify-between"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
@@ -140,7 +167,7 @@
                 setCurrentPlayer(0);
                 setPeeksLeft(2);
                 setGameState('setup');
-                setMessage("Tap 2 cards to peek!");
+                setMessage("Tap 2 of your cards to peek!");
                 setScores(null);
                 setShowCalledBy(null);
                 setTurnsAfterShow(0);
@@ -268,7 +295,7 @@
             const enterMatchMode = () => {
                 if (discardPile.length === 0) return;
                 setGameState('match-mode');
-                setMessage("MATCH: Tap matching table card!");
+                setMessage("MATCH: Tap matching card on table!");
             };
 
             const handleMatchAttempt = (pIdx, cIdx) => {
@@ -644,11 +671,6 @@
                 setMessage(`Winner: ${winners.join(" & ")} (${minScore} pts)`);
             };
 
-            const getActiveCount = (playerIdx) => {
-                if (!players[playerIdx]) return 0;
-                return players[playerIdx].cards.filter(c => c !== null).length;
-            };
-
             const getAnimationClass = (playerIdx, cardIdx) => {
                 const anim = animatingIndices.find(a => a.playerIdx === playerIdx && a.cardIdx === cardIdx);
                 if (!anim) return '';
@@ -664,17 +686,12 @@
                 return 'scale-90 opacity-40';
             };
 
-            const getReadyCountFraction = () => {
-                const completed = readyPlayers.filter(r => r === true).length;
-                return `${completed}/${playerCount} Ready`;
-            };
-
             if (gameState === 'menu') {
                 return (
                     <div className="flex flex-col items-center justify-center min-h-[90vh] text-center px-4">
                         <div className="bg-emerald-950/80 border border-emerald-800 p-6 rounded-3xl shadow-2xl max-w-sm w-full backdrop-blur-md">
                             <h1 className="text-3xl font-extrabold tracking-wider text-yellow-400 drop-shadow mb-1">MEMORY GRID</h1>
-                            <p className="text-emerald-200 text-xs mb-6">Responsive Edition</p>
+                            <p className="text-emerald-200 text-xs mb-6">Truly Fluid Adaptive Edition</p>
                             
                             <div className="flex flex-col gap-3">
                                 <button 
@@ -749,33 +766,33 @@
             }
 
             return (
-                <div className="flex flex-col justify-between landscape-container select-none min-h-[95vh] py-1">
+                <div className="flex flex-col justify-between h-full py-1">
                     
-                    {/* Tiny Header: Hidden completely on very short screens */}
-                    <div className="text-center mb-1 landscape-hide">
-                        <h1 className="text-lg font-black text-yellow-400 tracking-wider">MEMORY GRID</h1>
+                    {/* Tiny Header: Hidden completely on short screens */}
+                    <div className="text-center mb-1 hide-on-short">
+                        <h1 className="text-lg md:text-2xl font-black text-yellow-400 tracking-wider">MEMORY GRID</h1>
                     </div>
 
-                    {/* Highly Responsive Screen-Fitting Table Grid */}
-                    <div className="w-full flex flex-row justify-between items-center landscape-row gap-2 max-w-4xl mx-auto px-1">
+                    {/* Responsive Dynamic Grid layout */}
+                    <div className="w-full flex flex-row justify-around items-center gap-1 max-w-5xl mx-auto px-1">
                         
-                        {/* LEFT COLUMN: Opponent P2 & P4 */}
-                        <div className="flex flex-col sm:flex-col gap-1 items-center justify-center">
+                        {/* LEFT PLAYER COLUMN */}
+                        <div className="flex flex-col gap-1 items-center justify-center">
                             {/* P2 (Left Side) */}
                             {players[1] && (
-                                <div className={`flex flex-col items-center bg-emerald-800/40 p-1.5 rounded-xl border w-32 sm:w-44 transition-all duration-300 ${currentPlayer === 1 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                <div className={`flex flex-col items-center bg-emerald-800/40 p-1 md:p-2 rounded-xl border w-[28vw] md:w-44 transition-all duration-300 tight-padding ${currentPlayer === 1 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
                                     <div className="flex items-center gap-1 mb-0.5">
                                         <div className={`w-1.5 h-1.5 rounded-full ${readyPlayers[1] ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                        <h2 className="text-[10px] font-semibold text-red-300 truncate max-w-[70px]">{players[1].name}</h2>
+                                        <h2 className="text-[10px] font-semibold text-red-300 truncate max-w-[65px]">{players[1].name}</h2>
                                     </div>
                                     <div className="grid grid-cols-2 gap-1">
                                         {players[1].cards.map((card, idx) => {
-                                            if (!card) return <div key={idx} className="w-8 h-11 rounded border border-dashed border-emerald-800/40 opacity-30 landscape-card"></div>;
+                                            if (!card) return <div key={idx} className="card-fluid rounded border border-dashed border-emerald-800/40 opacity-30"></div>;
                                             return (
                                                 <div 
                                                     key={card.id || idx} 
                                                     onClick={() => handleCardClick(1, idx)}
-                                                    className={`w-8 h-11 rounded flex items-center justify-center font-bold text-xs cursor-pointer border card-transition transform active:scale-95 shadow-sm landscape-card ${
+                                                    className={`card-fluid rounded flex items-center justify-center font-bold cursor-pointer border card-transition transform active:scale-95 shadow-sm ${
                                                         card.visible ? 'bg-white text-black border-yellow-400' : 'bg-blue-800 border-white text-white'
                                                     } ${getAnimationClass(1, idx)}`}
                                                 >
@@ -787,21 +804,21 @@
                                 </div>
                             )}
 
-                            {/* P4 (Bottom Left / 4 players) */}
+                            {/* P4 (Four Players Bottom Left) */}
                             {players[3] && (
-                                <div className={`flex flex-col items-center bg-emerald-800/40 p-1.5 rounded-xl border w-32 sm:w-44 transition-all duration-300 ${currentPlayer === 3 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                <div className={`flex flex-col items-center bg-emerald-800/40 p-1 md:p-2 rounded-xl border w-[28vw] md:w-44 transition-all duration-300 tight-padding ${currentPlayer === 3 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
                                     <div className="flex items-center gap-1 mb-0.5">
                                         <div className={`w-1.5 h-1.5 rounded-full ${readyPlayers[3] ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                        <h2 className="text-[10px] font-semibold text-purple-300 truncate max-w-[70px]">{players[3].name}</h2>
+                                        <h2 className="text-[10px] font-semibold text-purple-300 truncate max-w-[65px]">{players[3].name}</h2>
                                     </div>
                                     <div className="grid grid-cols-2 gap-1">
                                         {players[3].cards.map((card, idx) => {
-                                            if (!card) return <div key={idx} className="w-8 h-11 rounded border border-dashed border-emerald-800/40 opacity-30 landscape-card"></div>;
+                                            if (!card) return <div key={idx} className="card-fluid rounded border border-dashed border-emerald-800/40 opacity-30"></div>;
                                             return (
                                                 <div 
                                                     key={card.id || idx} 
                                                     onClick={() => handleCardClick(3, idx)}
-                                                    className={`w-8 h-11 rounded flex items-center justify-center font-bold text-xs cursor-pointer border card-transition transform active:scale-95 shadow-sm landscape-card ${
+                                                    className={`card-fluid rounded flex items-center justify-center font-bold cursor-pointer border card-transition transform active:scale-95 shadow-sm ${
                                                         card.visible ? 'bg-white text-black border-yellow-400' : 'bg-blue-800 border-white text-white'
                                                     } ${getAnimationClass(3, idx)}`}
                                                 >
@@ -814,20 +831,20 @@
                             )}
                         </div>
 
-                        {/* CENTER COLUMN: Central Action Piles */}
-                        <div className="flex flex-col items-center gap-1 bg-emerald-950/60 p-2 rounded-xl border border-emerald-800 w-28 sm:w-36">
-                            <div className="flex gap-2 justify-center items-center">
+                        {/* CENTER PILING BOX */}
+                        <div className="flex flex-col items-center gap-1 bg-emerald-950/60 p-1 md:p-3 rounded-xl border border-emerald-800 w-[24vw] md:w-36 tight-padding">
+                            <div className="flex gap-1 md:gap-2 justify-center items-center">
                                 <button 
                                     onClick={drawFromDeck} 
                                     disabled={gameState !== 'playing' || activeCard || currentPlayer !== 0 || matchWindowActive}
-                                    className="w-10 h-14 bg-red-800 border border-white rounded flex items-center justify-center font-bold text-white disabled:opacity-30 text-lg active:scale-95 shadow-md landscape-pile"
+                                    className="pile-fluid bg-red-800 border border-white rounded flex items-center justify-center font-bold text-white disabled:opacity-30 text-lg active:scale-95 shadow-md"
                                 >
                                     🂠
                                 </button>
                                 <button 
                                     onClick={drawFromDiscard}
                                     disabled={gameState !== 'playing' || activeCard || discardPile.length === 0 || currentPlayer !== 0 || matchWindowActive}
-                                    className="w-10 h-14 bg-white text-black border border-yellow-400 rounded flex items-center justify-center font-bold text-xs disabled:opacity-30 active:scale-95 shadow-md landscape-pile"
+                                    className="pile-fluid bg-white text-black border border-yellow-400 rounded flex items-center justify-center font-bold text-xs md:text-sm disabled:opacity-30 active:scale-95 shadow-md"
                                 >
                                     {discardPile.length > 0 ? `${discardPile[discardPile.length - 1].value}${discardPile[discardPile.length - 1].suit}` : "Empty"}
                                 </button>
@@ -836,45 +853,45 @@
                             <button
                                 onClick={enterMatchMode}
                                 disabled={discardPile.length === 0 || gameState === 'setup' || gameState === 'ended'}
-                                className={`w-full text-white font-black py-1 rounded text-[10px] ${
+                                className={`w-full text-white font-black py-0.5 md:py-1 rounded text-[9px] md:text-xs ${
                                     matchWindowActive 
                                         ? 'bg-yellow-500 text-slate-900 animate-pulse ring-1 ring-yellow-300' 
                                         : 'bg-red-600 disabled:opacity-50'
                                 }`}
                             >
-                                {matchWindowActive ? `Match! ${matchCountdown}s` : "Match!"}
+                                {matchWindowActive ? `${matchCountdown}s` : "Match!"}
                             </button>
 
                             {activeCard && (
-                                <div className="flex items-center gap-1 border-t border-emerald-800 pt-1 w-full justify-center">
-                                    <div className="w-8 h-11 bg-white text-black border border-yellow-400 rounded flex flex-col items-center justify-center font-bold text-[10px] shadow-sm">
+                                <div className="flex flex-col md:flex-row items-center gap-1 border-t border-emerald-800 pt-1 w-full justify-center">
+                                    <div className="card-fluid bg-white text-black border border-yellow-400 rounded flex flex-col items-center justify-center font-bold shadow-sm">
                                         <div>{activeCard.value}</div>
-                                        <div>{activeCard.suit}</div>
+                                        <div className="text-[10px]">{activeCard.suit}</div>
                                     </div>
-                                    <button onClick={discardActive} className="bg-red-600 text-white font-bold text-[9px] px-1.5 py-0.5 rounded active:scale-90">
+                                    <button onClick={discardActive} className="bg-red-600 text-white font-bold text-[8px] md:text-[10px] px-1 py-0.5 rounded active:scale-90">
                                         Discard
                                     </button>
                                 </div>
                             )}
                         </div>
 
-                        {/* RIGHT COLUMN: Opponent P3 & P1 (You) */}
-                        <div className="flex flex-col sm:flex-col gap-1 items-center justify-center">
+                        {/* RIGHT PLAYER COLUMN */}
+                        <div className="flex flex-col gap-1 items-center justify-center">
                             {/* P3 (Top Right) */}
                             {players[2] && (
-                                <div className={`flex flex-col items-center bg-emerald-800/40 p-1.5 rounded-xl border w-32 sm:w-44 transition-all duration-300 ${currentPlayer === 2 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                <div className={`flex flex-col items-center bg-emerald-800/40 p-1 md:p-2 rounded-xl border w-[28vw] md:w-44 transition-all duration-300 tight-padding ${currentPlayer === 2 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
                                     <div className="flex items-center gap-1 mb-0.5">
                                         <div className={`w-1.5 h-1.5 rounded-full ${readyPlayers[2] ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                        <h2 className="text-[10px] font-semibold text-pink-300 truncate max-w-[70px]">{players[2].name}</h2>
+                                        <h2 className="text-[10px] font-semibold text-pink-300 truncate max-w-[65px]">{players[2].name}</h2>
                                     </div>
                                     <div className="grid grid-cols-2 gap-1">
                                         {players[2].cards.map((card, idx) => {
-                                            if (!card) return <div key={idx} className="w-8 h-11 rounded border border-dashed border-emerald-800/40 opacity-30 landscape-card"></div>;
+                                            if (!card) return <div key={idx} className="card-fluid rounded border border-dashed border-emerald-800/40 opacity-30"></div>;
                                             return (
                                                 <div 
                                                     key={card.id || idx} 
                                                     onClick={() => handleCardClick(2, idx)}
-                                                    className={`w-8 h-11 rounded flex items-center justify-center font-bold text-xs cursor-pointer border card-transition transform active:scale-95 shadow-sm landscape-card ${
+                                                    className={`card-fluid rounded flex items-center justify-center font-bold cursor-pointer border card-transition transform active:scale-95 shadow-sm ${
                                                         card.visible ? 'bg-white text-black border-yellow-400' : 'bg-blue-800 border-white text-white'
                                                     } ${getAnimationClass(2, idx)}`}
                                                 >
@@ -888,19 +905,19 @@
 
                             {/* P1 (User - Bottom Right) */}
                             {players[0] && (
-                                <div className={`flex flex-col items-center bg-emerald-800/45 p-1.5 rounded-xl border w-32 sm:w-44 transition-all duration-300 ${currentPlayer === 0 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                <div className={`flex flex-col items-center bg-emerald-800/45 p-1 md:p-2 rounded-xl border w-[28vw] md:w-44 transition-all duration-300 tight-padding ${currentPlayer === 0 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
                                     <div className="flex items-center gap-1 mb-0.5">
                                         <div className={`w-1.5 h-1.5 rounded-full ${readyPlayers[0] ? 'bg-green-500' : 'bg-red-500'}`}></div>
                                         <h2 className="text-[10px] font-semibold text-green-300">You</h2>
                                     </div>
                                     <div className="grid grid-cols-2 gap-1">
                                         {players[0].cards.map((card, idx) => {
-                                            if (!card) return <div key={idx} className="w-8 h-11 rounded border border-dashed border-emerald-800/40 opacity-30 landscape-card"></div>;
+                                            if (!card) return <div key={idx} className="card-fluid rounded border border-dashed border-emerald-800/40 opacity-30"></div>;
                                             return (
                                                 <div 
                                                     key={card.id || idx} 
                                                     onClick={() => handleCardClick(0, idx)}
-                                                    className={`w-8 h-11 rounded flex items-center justify-center font-bold text-xs cursor-pointer border card-transition transform active:scale-95 shadow-sm landscape-card ${
+                                                    className={`card-fluid rounded flex items-center justify-center font-bold cursor-pointer border card-transition transform active:scale-95 shadow-sm ${
                                                         card.visible || (activeCard && gameState === 'playing')
                                                             ? 'bg-white text-black border-yellow-400' 
                                                             : 'bg-red-800 border-white text-white'
@@ -917,29 +934,29 @@
 
                     </div>
 
-                    {/* Turn Tracker and Info Box */}
-                    <div className="w-full max-w-sm mx-auto flex flex-col items-center gap-1 bg-black/40 border border-emerald-800 rounded-xl p-1 text-center my-0.5 landscape-box">
-                        <p className="text-[11px] text-slate-100 font-medium px-2 truncate w-full">{message}</p>
+                    {/* Notification Box */}
+                    <div className="w-full max-w-sm mx-auto flex flex-col items-center gap-1 bg-black/40 border border-emerald-800 rounded-xl p-1 text-center my-1">
+                        <p className="text-[11px] md:text-sm text-slate-100 font-medium px-2 truncate w-full">{message}</p>
                         
                         {gameState === 'waiting-ready' && (
                             <button
                                 onClick={handleReadyNextTurn}
-                                className="bg-yellow-500 text-slate-950 font-black py-1 px-4 rounded text-[10px] active:scale-95"
+                                className="bg-yellow-500 text-slate-950 font-black py-1 px-4 rounded text-[10px] md:text-xs active:scale-95 shadow-md"
                             >
                                 NEXT TURN 👉
                             </button>
                         )}
                     </div>
 
-                    {/* Bottom Utility Bar */}
-                    <div className="w-full flex flex-row justify-between items-center bg-emerald-950 p-2 rounded-xl gap-2 text-[11px]">
+                    {/* Bottom Toolbar */}
+                    <div className="w-full flex flex-row justify-between items-center bg-emerald-950 p-2 rounded-xl gap-2 text-[11px] md:text-sm">
                         <div className="flex gap-1.5">
-                            <button onClick={() => setGameState('menu')} className="bg-emerald-800 text-white font-bold py-0.5 px-2 rounded text-[10px]">Menu</button>
-                            <button onClick={handleStartClick} className="bg-yellow-500 text-slate-950 font-extrabold py-0.5 px-2 rounded text-[10px]">Reset</button>
-                            <button onClick={callShow} disabled={gameState !== 'playing' || showCalledBy !== null || matchWindowActive} className="bg-orange-600 text-white font-extrabold py-0.5 px-2 rounded text-[10px] disabled:opacity-50">Show!</button>
+                            <button onClick={() => setGameState('menu')} className="bg-emerald-800 text-white font-bold py-0.5 px-2 rounded text-[10px] md:text-xs">Menu</button>
+                            <button onClick={handleStartClick} className="bg-yellow-500 text-slate-950 font-extrabold py-0.5 px-2 rounded text-[10px] md:text-xs">Reset</button>
+                            <button onClick={callShow} disabled={gameState !== 'playing' || showCalledBy !== null || matchWindowActive} className="bg-orange-600 text-white font-extrabold py-0.5 px-2 rounded text-[10px] md:text-xs disabled:opacity-50">Show!</button>
                         </div>
                         {scores ? (
-                            <div className="flex gap-1.5 text-[10px] font-bold">
+                            <div className="flex gap-1.5 text-[10px] md:text-xs font-bold">
                                 {scores.map((score, idx) => (
                                     <span key={idx} className={idx === 0 ? "text-green-300" : "text-red-300"}>
                                         {idx === 0 ? "You" : `P${idx}`}:{score}
@@ -947,7 +964,7 @@
                                 ))}
                             </div>
                         ) : (
-                            <div className="text-[9px] text-emerald-400 hidden sm:block">Joker (-1) | 7 (0) | J (11) | Q (12) | K (13)</div>
+                            <div className="text-[10px] text-emerald-400 hidden sm:block">Joker (-1) | 7 (0) | J (11) | Q (12) | K (13)</div>
                         )}
                     </div>
                 </div>
