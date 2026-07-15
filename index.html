@@ -13,14 +13,13 @@
             transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease;
         }
         
-        /* Lock screen to prevent layout shifts */
         html, body {
             overscroll-behavior-y: contain;
             overflow: hidden;
             height: 100%;
         }
 
-        /* 🚀 PHONE VIEW: COMPACT & SCROLL-FREE 🚀 */
+        /* PHONE VIEW */
         .card-fluid {
             width: 11vw;
             height: 16vw;
@@ -40,40 +39,38 @@
             min-height: 62px;
         }
 
-        /* 💻 LAPTOP & DESKTOP SPECIFIC LAYOUT 💻 */
+        /* DESKTOP SPECIFIC LAYOUT */
         @media (min-width: 1024px) {
             .card-fluid {
                 width: 7.5rem;
                 height: 10.5rem;
                 max-width: none;
                 max-height: none;
-                font-size: 2rem !important; /* Extremely readable font size inside cards */
+                font-size: 2rem !important;
             }
-            /* Make Center Deck & Burner Pile scale beautifully with laptop cards */
             .pile-fluid {
                 width: 8.5rem !important;
                 height: 12rem !important;
                 max-width: none;
                 max-height: none;
-                font-size: 2rem !important; /* Larger text/emojis inside piles */
+                font-size: 2rem !important;
             }
             .laptop-text-large {
-                font-size: 1.25rem !important; /* Larger player names and general text */
+                font-size: 1.25rem !important;
             }
             .laptop-title-large {
-                font-size: 2.5rem !important; /* Standout title */
+                font-size: 2.5rem !important;
             }
             .laptop-message-large {
-                font-size: 1.5rem !important; /* Highly visible middle feedback messages */
+                font-size: 1.5rem !important;
                 padding: 0.75rem !important;
             }
             .laptop-btn-large {
-                font-size: 1.1rem !important; /* Highly interactive main UI buttons */
+                font-size: 1.1rem !important;
                 padding: 0.75rem 1.75rem !important;
             }
         }
 
-        /* Mobile Landscape (Short vertical screens) */
         @media (max-height: 480px) {
             .card-fluid {
                 width: 10.5vh;
@@ -101,8 +98,7 @@
 
         const CARD_VALUES = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'Joker'];
         const SUITS = ['♠', '♥', '♦', '♣'];
-        
-        const BOT_NAMES = ["Shark 🦈", "Queen 👑", "Lucky 🍀", "Dave 🃏", "Shadow 👤", "Ace ♠️", "Chips 🪙"];
+        const BOT_NAMES = ["Shark", "Queen", "Lucky", "Dave", "Shadow", "Ace", "Chips"];
 
         function createDeck() {
             let deck = [];
@@ -144,8 +140,10 @@
             const [swapSelection, setSwapSelection] = useState([]);
             const [matchWindowActive, setMatchWindowActive] = useState(false);
             const [matchCountdown, setMatchCountdown] = useState(0);
-            
             const [readyPlayers, setReadyPlayers] = useState([]); 
+
+            // AI specific memory system tracking: { [pIdx-cIdx]: { value, suit, knownAt } }
+            const [aiMemory, setAiMemory] = useState({});
 
             const [animatingCard, setAnimatingCard] = useState(null);
             const [animatingIndices, setAnimatingIndices] = useState([]);
@@ -153,10 +151,24 @@
             const aiTimerRef = useRef(null);
             const countdownIntervalRef = useRef(null);
 
-            // Cleanup timers when component unmounts or restarts
             useEffect(() => {
                 return () => clearTimers();
             }, []);
+
+            const updateAiMemory = (playerIdx, cardIdx, card) => {
+                if (!card) {
+                    setAiMemory(prev => {
+                        const next = { ...prev };
+                        delete next[`${playerIdx}-${cardIdx}`];
+                        return next;
+                    });
+                    return;
+                }
+                setAiMemory(prev => ({
+                    ...prev,
+                    [`${playerIdx}-${cardIdx}`]: { value: card.value, suit: card.suit, id: card.id }
+                }));
+            };
 
             const handleStartClick = () => {
                 setGameState('player-select');
@@ -180,6 +192,17 @@
                     });
                 }
 
+                // Initial Bot Memory (Bots peek 2 of their own cards at setup, just like humans)
+                const initialMemory = {};
+                for (let p = 1; p < count; p++) {
+                    const peekedIndices = [0, 1]; // Bots inspect their first two slots
+                    peekedIndices.forEach(idx => {
+                        const card = generatedPlayers[p].cards[idx];
+                        initialMemory[`${p}-${idx}`] = { value: card.value, suit: card.suit, id: card.id };
+                    });
+                }
+
+                setAiMemory(initialMemory);
                 setDeck(newDeck);
                 setPlayers(generatedPlayers);
                 setDiscardPile([newDeck.pop()]);
@@ -196,7 +219,6 @@
                 setMatchCountdown(0);
                 setAnimatingCard(null);
                 setAnimatingIndices([]);
-                
                 setReadyPlayers(new Array(count).fill(false));
                 clearTimers();
             };
@@ -295,8 +317,9 @@
                         setMessage(`Power: Tap an OPPONENT'S card to spy!`);
                         setGameState('spy-power');
                     } else if (discarded.value === 'J') {
-                        setMessage("Power: Jack! Take another turn.");
-                        setGameState('playing');
+                        setMessage("Power: Jack! Extra turn.");
+                        setGameState('playing'); 
+                        // Note: Keep currentPlayer as 0 (You), does not trigger prepareNextTurn()
                     } else if (discarded.value === 'Q') {
                         setMessage("Power: Swap any 2. Tap the first card.");
                         setGameState('swap-power-1');
@@ -331,7 +354,13 @@
                     setAnimatingIndices([{ playerIdx: pIdx, cardIdx: cIdx, action: 'burn' }]);
 
                     setTimeout(() => {
-                        setMessage(`CORRECT! ${targetCard.value}${targetCard.suit} burned!`);
+                        // Clear the burned card from bot memory registers globally
+                        for (let k = 0; k < playerCount; k++) {
+                            updateAiMemory(k, cIdx, null);
+                        }
+
+                        setMessage(`BURNED: ${players[pIdx].name} matched and burned the ${targetCard.value}${targetCard.suit}!`);
+                        
                         const updatedPlayers = JSON.parse(JSON.stringify(players));
                         updatedPlayers[pIdx].cards[cIdx] = null;
                         
@@ -343,7 +372,7 @@
                             setTimeout(() => {
                                 setGameState('playing');
                                 prepareNextTurn();
-                            }, 1500);
+                            }, 1800);
                         } else {
                             const validP1Indices = updatedPlayers[0].cards.map((c, i) => c !== null ? i : null).filter(v => v !== null);
                             if (validP1Indices.length > 0) {
@@ -358,6 +387,10 @@
                                         const nextPlayers = JSON.parse(JSON.stringify(updatedPlayers));
                                         nextPlayers[0].cards[randomP1Index] = null;
                                         nextPlayers[pIdx].cards[cIdx] = givenCard;
+                                        
+                                        // Update memory because card was given to bot
+                                        updateAiMemory(pIdx, cIdx, givenCard);
+
                                         setPlayers(nextPlayers);
                                         setAnimatingIndices([]);
                                         setGameState('playing');
@@ -376,11 +409,11 @@
                     clearTimers();
                     setMatchWindowActive(false);
 
-                    setMessage(`WRONG! Penalty card added!`);
+                    setMessage(`WRONG! Penalty card added to ${players[pIdx].name}!`);
                     const newDeck = [...deck];
                     const penaltyCard = newDeck.pop();
                     const updatedPlayers = JSON.parse(JSON.stringify(players));
-                    updatedPlayers[0].cards.push({ ...penaltyCard, visible: false, id: `p0-penalty-${Date.now()}` });
+                    updatedPlayers[pIdx].cards.push({ ...penaltyCard, visible: false, id: `p${pIdx}-penalty-${Date.now()}` });
                     setDeck(newDeck);
                     setPlayers(updatedPlayers);
 
@@ -392,16 +425,33 @@
             };
 
             const triggerMatchWindow = (callbackOnComplete) => {
+                // Bots check if they know they have a match before window timer runs
+                const topDiscard = discardPile[discardPile.length - 1] || activeCard;
+                if (topDiscard) {
+                    // Search AI memories to see if any bot knows they possess a matching card value
+                    for (let pIdx = 1; pIdx < playerCount; pIdx++) {
+                        for (let cIdx = 0; cIdx < players[pIdx].cards.length; cIdx++) {
+                            const known = aiMemory[`${pIdx}-${cIdx}`];
+                            if (known && known.value === topDiscard.value) {
+                                // Trigger bot matching immediately
+                                clearTimers();
+                                handleMatchAttempt(pIdx, cIdx);
+                                return;
+                            }
+                        }
+                    }
+                }
+
                 setMatchWindowActive(true);
                 let timeLeft = 4;
                 setMatchCountdown(timeLeft);
-                setMessage(`Match Window active! (${timeLeft}s)`);
+                setMessage(`Match Window open! (${timeLeft}s)`);
 
                 countdownIntervalRef.current = setInterval(() => {
                     timeLeft -= 1;
                     setMatchCountdown(timeLeft);
                     if (timeLeft > 0) {
-                        setMessage(`Match Window active! (${timeLeft}s)`);
+                        setMessage(`Match Window open! (${timeLeft}s)`);
                     } else {
                         clearInterval(countdownIntervalRef.current);
                         setMatchWindowActive(false);
@@ -482,6 +532,17 @@
                     updatedPlayers[p1].cards[c1] = updatedPlayers[p2].cards[c2];
                     updatedPlayers[p2].cards[c2] = temp;
                     
+                    // Update AI knowledge banks for swapped cards
+                    const m1 = aiMemory[`${p1}-${c1}`];
+                    const m2 = aiMemory[`${p2}-${c2}`];
+                    
+                    setAiMemory(prev => {
+                        const next = { ...prev };
+                        if (m2) next[`${p1}-${c1}`] = m2; else delete next[`${p1}-${c1}`];
+                        if (m1) next[`${p2}-${c2}`] = m1; else delete next[`${p2}-${c2}`];
+                        return next;
+                    });
+
                     setPlayers(updatedPlayers);
                     setAnimatingIndices([]);
                     setMessage("Swapped!");
@@ -540,7 +601,7 @@
                 }
                 
                 setGameState('waiting-ready');
-                setMessage(`Turn ended.`);
+                setMessage(`Turn complete.`);
             };
 
             const handleReadyNextTurn = () => {
@@ -578,25 +639,36 @@
 
                 if (['8', '10', 'J', 'Q', 'K'].includes(drawn.value)) {
                     setDiscardPile(prev => [...prev, drawn]);
-                    setMessage(`${players[botIdx].name} played power ${drawn.value}!`);
+                    setMessage(`${players[botIdx].name} played power card ${drawn.value}!`);
                     
                     aiTimerRef.current = setTimeout(() => {
                         if (drawn.value === '8') {
+                            // Bot peeks one of its own cards it doesn't know yet
+                            const unknownIndices = ownValid.filter(idx => !aiMemory[`${botIdx}-${idx}`]);
+                            const peekTarget = unknownIndices.length > 0 ? unknownIndices[0] : ownValid[0];
+                            
+                            const targetCard = players[botIdx].cards[peekTarget];
+                            updateAiMemory(botIdx, peekTarget, targetCard);
+
                             setMessage(`${players[botIdx].name} peeked.`);
                             triggerMatchWindow(() => completeAITurn(botIdx));
                         } else if (drawn.value === '10') {
-                            const otherPlayers = targetablePlayers.filter(tp => tp.playerIdx !== botIdx);
-                            const randomTarget = otherPlayers[Math.floor(Math.random() * otherPlayers.length)];
-                            setMessage(`${players[botIdx].name} spied.`);
+                            // Bot spies on another player card
+                            const opponents = targetablePlayers.filter(tp => tp.playerIdx !== botIdx);
+                            const chosenOpp = opponents[Math.floor(Math.random() * opponents.length)];
+                            const chosenCardIdx = chosenOpp.validIndices[Math.floor(Math.random() * chosenOpp.validIndices.length)];
+                            
+                            const targetCard = players[chosenOpp.playerIdx].cards[chosenCardIdx];
+                            updateAiMemory(chosenOpp.playerIdx, chosenCardIdx, targetCard);
+
+                            setMessage(`${players[botIdx].name} spied on a card.`);
                             triggerMatchWindow(() => completeAITurn(botIdx));
                         } else if (drawn.value === 'J') {
-                            if (!isExtraTurn) {
-                                setMessage(`${players[botIdx].name} plays again!`);
-                                aiTimerRef.current = setTimeout(() => { executeAITurn(botIdx, true); }, 1500); 
-                            } else {
-                                setMessage(`${players[botIdx].name} plays Jack.`);
-                                triggerMatchWindow(() => completeAITurn(botIdx));
-                            }
+                            // Jack Power extra turn!
+                            setMessage(`${players[botIdx].name} draws again from Jack!`);
+                            aiTimerRef.current = setTimeout(() => { 
+                                executeAITurn(botIdx, true); 
+                            }, 1800);
                         } else if (drawn.value === 'Q' || drawn.value === 'K') {
                             const otherPlayers = targetablePlayers.filter(tp => tp.playerIdx !== botIdx);
                             if (otherPlayers.length > 0 && ownValid.length > 0) {
@@ -613,7 +685,15 @@
                 } else {
                     if (ownValid.length > 0) {
                         const botCards = [...players[botIdx].cards];
-                        const swapIdx = ownValid[Math.floor(Math.random() * ownValid.length)];
+                        // Bot checks if they know they have a high-value card to replace, otherwise replaces random card
+                        let swapIdx = ownValid[Math.floor(Math.random() * ownValid.length)];
+                        for (let idx of ownValid) {
+                            const known = aiMemory[`${botIdx}-${idx}`];
+                            if (known && getCardPoints(known) > 8) {
+                                swapIdx = idx;
+                                break;
+                            }
+                        }
                         
                         setAnimatingIndices([{ playerIdx: botIdx, cardIdx: swapIdx }]);
                         
@@ -622,6 +702,9 @@
                             botCards[swapIdx] = { ...drawn, visible: false, id: `p${botIdx}-${swapIdx}-${Date.now()}` };
                             setDiscardPile(prev => [...prev, swappedOut]);
                             
+                            // Bot updates memory for the new card slot
+                            updateAiMemory(botIdx, swapIdx, drawn);
+
                             const nextPlayers = [...players];
                             nextPlayers[botIdx].cards = botCards;
                             setPlayers(nextPlayers);
@@ -642,7 +725,7 @@
 
                 const botScore = players[botIdx].cards.reduce((sum, c) => sum + getCardPoints(c), 0);
                 if (botScore <= 5 && showCalledBy === null) {
-                    setMessage(`${players[botIdx].name} yelled SHOW!`);
+                    setMessage(`${players[botIdx].name} called SHOW!`);
                     setShowCalledBy(botIdx);
                     setGameState('waiting-ready');
                 } else {
@@ -708,23 +791,23 @@
             if (gameState === 'menu') {
                 return (
                     <div className="flex flex-col items-center justify-center min-h-[90vh] text-center px-4">
-                        <div className="bg-emerald-950/80 border border-emerald-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full backdrop-blur-md lg:max-w-md lg:p-12">
-                            <h1 className="text-3xl font-extrabold tracking-wider text-yellow-400 drop-shadow mb-1 laptop-title-large">MEMORY GRID</h1>
-                            <p className="text-emerald-200 text-xs mb-6 font-semibold laptop-text-large">Adaptive Desktop & Mobile Edition</p>
+                        <div className="bg-emerald-950/80 border-2 border-emerald-800/60 p-8 rounded-3xl shadow-2xl max-w-sm w-full backdrop-blur-md lg:max-w-md lg:p-12">
+                            <h1 className="text-3xl font-black tracking-wider text-yellow-400 drop-shadow mb-1 laptop-title-large">MEMORY GRID</h1>
+                            <p className="text-emerald-200 text-xs mb-6 font-semibold laptop-text-large">Adaptive Desktop Edition</p>
                             
                             <div className="flex flex-col gap-3">
                                 <button 
                                     onClick={handleStartClick}
                                     className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black py-4 px-6 rounded-xl shadow-lg transition-all duration-300 text-lg laptop-btn-large"
                                 >
-                                    🎮 START GAME
+                                    START GAME
                                 </button>
                                 
                                 <button 
                                     onClick={() => setShowRules(true)}
                                     className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-xl border border-emerald-600 text-sm transition-all duration-300 laptop-btn-large"
                                 >
-                                    📖 HOW TO PLAY
+                                    HOW TO PLAY
                                 </button>
                             </div>
                         </div>
@@ -733,43 +816,40 @@
                             <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
                                 <div className="bg-slate-900 border-2 border-emerald-500/30 rounded-3xl p-6 max-w-sm w-full max-h-[85vh] overflow-y-auto text-left shadow-2xl lg:max-w-3xl lg:p-8">
                                     <h2 className="text-xl md:text-2xl font-black text-yellow-400 mb-4 flex justify-between items-center border-b border-slate-800 pb-3">
-                                        <span>📖 How to Play Memory Grid</span>
+                                        <span>How to Play Memory Grid</span>
                                         <button onClick={() => setShowRules(false)} className="text-slate-400 hover:text-white transition-colors text-3xl font-normal">&times;</button>
                                     </h2>
                                     
                                     <div className="space-y-4 text-slate-200 text-xs md:text-sm lg:grid lg:grid-cols-2 lg:gap-8 lg:space-y-0">
-                                        
-                                        {/* Column 1: Core Flow */}
                                         <div className="space-y-4">
                                             <div>
-                                                <h3 className="font-bold text-yellow-400 text-sm md:text-base mb-1">🎯 Objective</h3>
+                                                <h3 className="font-bold text-yellow-400 text-sm md:text-base mb-1">Objective</h3>
                                                 <p className="text-slate-300 leading-relaxed">
-                                                    Have the <strong>lowest card score</strong> in your hand when a player yells <strong>"Show!"</strong>. Keep track of your face-down cards to match or swap them out!
+                                                    Have the lowest card score in your hand when a player yells "Show!". Keep track of your face-down cards to match or swap them out.
                                                 </p>
                                             </div>
 
                                             <div className="border-t border-slate-800/80 pt-3">
-                                                <h3 className="font-bold text-yellow-400 text-sm md:text-base mb-1">⚙️ Setup & Turns</h3>
+                                                <h3 className="font-bold text-yellow-400 text-sm md:text-base mb-1">Setup & Turns</h3>
                                                 <ul className="list-disc list-inside space-y-1.5 text-slate-300">
-                                                    <li>You are dealt 4 cards face-down. You get to <strong>peek at exactly 2</strong> of them at the start.</li>
-                                                    <li>On your turn, either <strong>draw a card</strong> from the deck or <strong>take the face-up card</strong> from the discard pile.</li>
-                                                    <li>Swap the drawn card with one of your 4 face-down cards, discarding your old one.</li>
+                                                    <li>You get 4 cards face-down and peek at exactly 2 at the start.</li>
+                                                    <li>On your turn, draw from the deck or take the face-up card from the discard pile.</li>
+                                                    <li>Swap the card with one of your 4 face-down cards, discarding your old one.</li>
                                                 </ul>
                                             </div>
 
                                             <div className="border-t border-slate-800/80 pt-3">
-                                                <h3 className="font-bold text-yellow-400 text-sm md:text-base mb-1">⚡ Slap to Match!</h3>
+                                                <h3 className="font-bold text-yellow-400 text-sm md:text-base mb-1">Slap to Match!</h3>
                                                 <p className="text-slate-300 leading-relaxed">
-                                                    When any card is discarded, you have <strong>4 seconds</strong> to hit <strong className="text-red-400">Match!</strong> and tap a matching card in your hand to burn it away completely!
+                                                    When any card is discarded, players have 4 seconds to click Match! and tap a card with the matching value to burn it from their hand.
                                                 </p>
                                             </div>
                                         </div>
 
-                                        {/* Column 2: Powers & Scores */}
                                         <div className="space-y-4">
                                             <div className="bg-emerald-950/40 p-3 rounded-xl border border-emerald-900">
-                                                <h3 className="font-bold text-yellow-400 text-sm md:text-base mb-2">🔥 Discard Powers</h3>
-                                                <p className="text-slate-400 text-[11px] mb-2 leading-tight">These powers trigger immediately when drawn and thrown straight to the discard pile:</p>
+                                                <h3 className="font-bold text-yellow-400 text-sm md:text-base mb-2">Discard Powers</h3>
+                                                <p className="text-slate-400 text-[11px] mb-2 leading-tight">Powers trigger immediately when sent to the discard pile:</p>
                                                 <ul className="space-y-1.5 text-slate-300 text-xs">
                                                     <li><strong>8:</strong> Peek at one of your own cards.</li>
                                                     <li><strong>10:</strong> Spy on any opponent's card.</li>
@@ -780,22 +860,21 @@
                                             </div>
 
                                             <div className="border-t border-slate-800/80 pt-3">
-                                                <h3 className="font-bold text-yellow-400 text-sm md:text-base mb-1.5">📊 Scoring Values</h3>
+                                                <h3 className="font-bold text-yellow-400 text-sm md:text-base mb-1.5">Scoring Values</h3>
                                                 <div className="grid grid-cols-2 gap-2 text-xs text-slate-300">
-                                                    <div>🃏 <strong>Joker:</strong> -1 point</div>
-                                                    <div>✨ <strong>7:</strong> 0 points</div>
-                                                    <div>👑 <strong>King:</strong> 13 points</div>
-                                                    <div>💅 <strong>Queen:</strong> 12 points</div>
-                                                    <div>⚔️ <strong>Jack:</strong> 11 points</div>
-                                                    <div>🅰️ <strong>Ace:</strong> 1 point</div>
-                                                    <div className="col-span-2 text-slate-400 italic">All other cards are face value.</div>
+                                                    <div>Joker: -1 point</div>
+                                                    <div>7: 0 points</div>
+                                                    <div>King: 13 points</div>
+                                                    <div>Queen: 12 points</div>
+                                                    <div>Jack: 11 points</div>
+                                                    <div>Ace: 1 point</div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
 
                                     <button onClick={() => setShowRules(false)} className="mt-6 w-full bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-extrabold py-3 rounded-xl transition-all shadow-md text-sm md:text-base">
-                                        Let's Play! 🃏
+                                        Let's Play!
                                     </button>
                                 </div>
                             </div>
@@ -836,12 +915,11 @@
                         <h1 className="text-xl md:text-3xl font-black text-yellow-400 tracking-wider laptop-title-large">MEMORY GRID</h1>
                     </div>
 
-                    {/* Responsive Dynamic Grid layout */}
+                    {/* Main Board Grid */}
                     <div className="w-full flex flex-row justify-around items-center gap-1 md:gap-2 max-w-5xl mx-auto px-1 lg:gap-8">
                         
-                        {/* LEFT PLAYER COLUMN */}
+                        {/* LEFT COLUMN: Players 2 & 4 */}
                         <div className="flex flex-col gap-2 items-center justify-center lg:gap-6">
-                            {/* P2 (Left Side) */}
                             {players[1] && (
                                 <div className={`flex flex-col items-center justify-center bg-emerald-800/40 p-1.5 md:p-3 rounded-2xl border w-[29vw] md:w-56 transition-all duration-300 tight-padding lg:w-72 lg:p-4 ${currentPlayer === 1 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
                                     <div className="flex items-center gap-1.5 mb-1.5">
@@ -867,7 +945,6 @@
                                 </div>
                             )}
 
-                            {/* P4 (Four Players Bottom Left) */}
                             {players[3] && (
                                 <div className={`flex flex-col items-center justify-center bg-emerald-800/40 p-1.5 md:p-3 rounded-2xl border w-[29vw] md:w-56 transition-all duration-300 tight-padding lg:w-72 lg:p-4 ${currentPlayer === 3 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
                                     <div className="flex items-center gap-1.5 mb-1.5">
@@ -900,9 +977,9 @@
                                 <button 
                                     onClick={drawFromDeck} 
                                     disabled={gameState !== 'playing' || activeCard || currentPlayer !== 0 || matchWindowActive}
-                                    className="pile-fluid bg-red-800 border border-white rounded-lg flex items-center justify-center font-bold text-white disabled:opacity-30 active:scale-95 shadow-md"
+                                    className="pile-fluid bg-red-800 border border-white rounded-lg flex items-center justify-center font-bold text-white disabled:opacity-30 active:scale-95 shadow-md text-3xl"
                                 >
-                                    🂠
+                                    *
                                 </button>
                                 <button 
                                     onClick={drawFromDiscard}
@@ -938,9 +1015,8 @@
                             )}
                         </div>
 
-                        {/* RIGHT PLAYER COLUMN */}
+                        {/* RIGHT COLUMN: Players 3 & 1 (You) */}
                         <div className="flex flex-col gap-2 items-center justify-center lg:gap-6">
-                            {/* P3 (Top Right) */}
                             {players[2] && (
                                 <div className={`flex flex-col items-center justify-center bg-emerald-800/40 p-1.5 md:p-3 rounded-2xl border w-[29vw] md:w-56 transition-all duration-300 tight-padding lg:w-72 lg:p-4 ${currentPlayer === 2 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
                                     <div className="flex items-center gap-1.5 mb-1.5">
@@ -966,7 +1042,6 @@
                                 </div>
                             )}
 
-                            {/* P1 (User - Bottom Right) */}
                             {players[0] && (
                                 <div className={`flex flex-col items-center justify-center bg-emerald-800/45 p-1.5 md:p-3 rounded-2xl border w-[29vw] md:w-56 transition-all duration-300 tight-padding lg:w-72 lg:p-4 ${currentPlayer === 0 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
                                     <div className="flex items-center gap-1.5 mb-1.5">
@@ -1006,16 +1081,19 @@
                                 onClick={handleReadyNextTurn}
                                 className="bg-yellow-500 text-slate-950 font-black py-2 px-6 rounded-lg text-xs md:text-sm active:scale-95 shadow-md mt-1 laptop-btn-large"
                             >
-                                NEXT TURN 👉
+                                NEXT TURN
                             </button>
                         )}
                     </div>
 
-                    {/* 🎮 BOTTOM TOOLBAR 🎮 */}
+                    {/* BOTTOM TOOLBAR */}
                     <div className="w-full flex flex-col sm:flex-row justify-between items-center bg-emerald-950 p-3 sm:p-4 rounded-2xl gap-3 text-xs md:text-base mb-1 border border-emerald-800 lg:p-6">
                         <div className="flex gap-3 w-full sm:w-auto justify-center lg:gap-6">
                             <button onClick={() => setGameState('menu')} className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-lg text-xs md:text-sm transition-colors border border-emerald-700 shadow laptop-btn-large">
                                 Menu
+                            </button>
+                            <button onClick={() => setShowRules(true)} className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-lg text-xs md:text-sm transition-colors border border-emerald-700 shadow laptop-btn-large">
+                                Rules
                             </button>
                             <button onClick={handleStartClick} className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-extrabold py-2 px-5 rounded-lg text-xs md:text-sm transition-colors shadow laptop-btn-large">
                                 Reset
@@ -1038,6 +1116,74 @@
                             </div>
                         )}
                     </div>
+
+                    {showRules && (
+                        <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+                            <div className="bg-slate-900 border-2 border-emerald-500/30 rounded-3xl p-6 max-w-sm w-full max-h-[85vh] overflow-y-auto text-left shadow-2xl lg:max-w-3xl lg:p-8">
+                                <h2 className="text-xl md:text-2xl font-black text-yellow-400 mb-4 flex justify-between items-center border-b border-slate-800 pb-3">
+                                    <span>How to Play Memory Grid</span>
+                                    <button onClick={() => setShowRules(false)} className="text-slate-400 hover:text-white transition-colors text-3xl font-normal">&times;</button>
+                                </h2>
+                                
+                                <div className="space-y-4 text-slate-200 text-xs md:text-sm lg:grid lg:grid-cols-2 lg:gap-8 lg:space-y-0">
+                                    <div className="space-y-4">
+                                        <div>
+                                            <h3 className="font-bold text-yellow-400 text-sm md:text-base mb-1">Objective</h3>
+                                            <p className="text-slate-300 leading-relaxed">
+                                                Have the lowest card score in your hand when a player yells "Show!". Keep track of your face-down cards to match or swap them out.
+                                            </p>
+                                        </div>
+
+                                        <div className="border-t border-slate-800/80 pt-3">
+                                            <h3 className="font-bold text-yellow-400 text-sm md:text-base mb-1">Setup & Turns</h3>
+                                            <ul className="list-disc list-inside space-y-1.5 text-slate-300">
+                                                <li>You get 4 cards face-down and peek at exactly 2 at the start.</li>
+                                                <li>On your turn, draw from the deck or take the face-up card from the discard pile.</li>
+                                                <li>Swap the card with one of your 4 face-down cards, discarding your old one.</li>
+                                            </ul>
+                                        </div>
+
+                                        <div className="border-t border-slate-800/80 pt-3">
+                                            <h3 className="font-bold text-yellow-400 text-sm md:text-base mb-1">Slap to Match!</h3>
+                                            <p className="text-slate-300 leading-relaxed">
+                                                When any card is discarded, players have 4 seconds to click Match! and tap a card with the matching value to burn it from their hand.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div className="bg-emerald-950/40 p-3 rounded-xl border border-emerald-900">
+                                            <h3 className="font-bold text-yellow-400 text-sm md:text-base mb-2">Discard Powers</h3>
+                                            <p className="text-slate-400 text-[11px] mb-2 leading-tight">Powers trigger immediately when sent to the discard pile:</p>
+                                            <ul className="space-y-1.5 text-slate-300 text-xs">
+                                                <li><strong>8:</strong> Peek at one of your own cards.</li>
+                                                <li><strong>10:</strong> Spy on any opponent's card.</li>
+                                                <li><strong>Jack:</strong> Take an immediate extra turn!</li>
+                                                <li><strong>Queen:</strong> Swap any 2 cards on the entire table.</li>
+                                                <li><strong>King:</strong> Spy on an opponent's card, then swap any 2.</li>
+                                            </ul>
+                                        </div>
+
+                                        <div className="border-t border-slate-800/80 pt-3">
+                                            <h3 className="font-bold text-yellow-400 text-sm md:text-base mb-1.5">Scoring Values</h3>
+                                            <div className="grid grid-cols-2 gap-2 text-xs text-slate-300">
+                                                <div>Joker: -1 point</div>
+                                                <div>7: 0 points</div>
+                                                <div>King: 13 points</div>
+                                                <div>Queen: 12 points</div>
+                                                <div>Jack: 11 points</div>
+                                                <div>Ace: 1 point</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button onClick={() => setShowRules(false)} className="mt-6 w-full bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-extrabold py-3 rounded-xl transition-all shadow-md text-sm md:text-base">
+                                    Continue Match
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         }
