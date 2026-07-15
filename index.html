@@ -22,8 +22,8 @@
 
         /* 🚀 PHONE VIEW: COMPACT & SCROLL-FREE 🚀 */
         .card-fluid {
-            width: 13vw;
-            height: 18.5vw;
+            width: 11vw;
+            height: 16vw;
             max-width: 62px;
             max-height: 88px;
             min-width: 38px;
@@ -32,8 +32,8 @@
         }
 
         .pile-fluid {
-            width: 15vw;
-            height: 21vw;
+            width: 13vw;
+            height: 18vw;
             max-width: 72px;
             max-height: 100px;
             min-width: 44px;
@@ -793,18 +793,18 @@
                     </div>
 
                     {/* Responsive Dynamic Grid layout */}
-                    <div className="w-full flex flex-row justify-around items-center gap-2 max-w-5xl mx-auto px-2 lg:gap-8">
+                    <div className="w-full flex flex-row justify-around items-center gap-1 md:gap-2 max-w-5xl mx-auto px-1 lg:gap-8">
                         
                         {/* LEFT PLAYER COLUMN */}
                         <div className="flex flex-col gap-2 items-center justify-center lg:gap-6">
                             {/* P2 (Left Side) */}
                             {players[1] && (
-                                <div className={`flex flex-col items-center bg-emerald-800/40 p-2 md:p-3 rounded-2xl border w-[28vw] md:w-56 transition-all duration-300 tight-padding lg:w-72 lg:p-4 ${currentPlayer === 1 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                <div className={`flex flex-col items-center justify-center bg-emerald-800/40 p-1.5 md:p-3 rounded-2xl border w-[29vw] md:w-56 transition-all duration-300 tight-padding lg:w-72 lg:p-4 ${currentPlayer === 1 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
                                     <div className="flex items-center gap-1.5 mb-1.5">
-                                        <div className={`w-2.5 h-2.5 rounded-full ${readyPlayers[1] ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                        <h2 className="text-xs md:text-sm font-bold text-red-300 truncate max-w-[85px] laptop-text-large">{players[1].name}</h2>
+                                        <div className={`w-2 h-2 rounded-full ${readyPlayers[1] ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                        <h2 className="text-[10px] md:text-sm font-bold text-red-300 truncate max-w-[85px] laptop-text-large">{players[1].name}</h2>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-1.5 md:gap-2 lg:gap-4">
+                                    <div className="grid grid-cols-2 gap-1 md:gap-2 lg:gap-4 justify-items-center justify-center">
                                         {players[1].cards.map((card, idx) => {
                                             if (!card) return <div key={idx} className="card-fluid rounded-lg border border-dashed border-emerald-800/40 opacity-30"></div>;
                                             return (
@@ -825,12 +825,12 @@
 
                             {/* P4 (Four Players Bottom Left) */}
                             {players[3] && (
-                                <div className={`flex flex-col items-center bg-emerald-800/40 p-2 md:p-3 rounded-2xl border w-[28vw] md:w-56 transition-all duration-300 tight-padding lg:w-72 lg:p-4 ${currentPlayer === 3 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                <div className={`flex flex-col items-center justify-center bg-emerald-800/40 p-1.5 md:p-3 rounded-2xl border w-[29vw] md:w-56 transition-all duration-300 tight-padding lg:w-72 lg:p-4 ${currentPlayer === 3 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
                                     <div className="flex items-center gap-1.5 mb-1.5">
-                                        <div className={`w-2.5 h-2.5 rounded-full ${readyPlayers[3] ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                        <h2 className="text-xs md:text-sm font-bold text-purple-300 truncate max-w-[85px] laptop-text-large">{players[3].name}</h2>
+                                        <div className={`w-2 h-2 rounded-full ${readyPlayers[3] ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                        <h2 className="text-[10px] md:text-sm font-bold text-purple-300 truncate max-w-[85px] laptop-text-large">{players[3].name}</h2>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-1.5 md:gap-2 lg:gap-4">
+                                    <div className="grid grid-cols-2 gap-1 md:gap-2 lg:gap-4 justify-items-center justify-center">
                                         {players[3].cards.map((card, idx) => {
                                             if (!card) return <div key={idx} className="card-fluid rounded-lg border border-dashed border-emerald-800/40 opacity-30"></div>;
                                             return (
@@ -851,8 +851,8 @@
                         </div>
 
                         {/* CENTER PILING BOX */}
-                        <div className="flex flex-col items-center gap-2 bg-emerald-950/60 p-2 md:p-4 rounded-2xl border border-emerald-800 w-[26vw] md:w-48 tight-padding lg:w-60 lg:p-6 lg:gap-4">
-                            <div className="flex gap-1.5 md:gap-3 justify-center items-center lg:gap-4">
+                        <div className="flex flex-col items-center gap-2 bg-emerald-950/60 p-2 md:p-4 rounded-2xl border border-emerald-800 w-[30vw] md:w-48 tight-padding lg:w-[20rem] lg:p-6 lg:gap-4">
+                            <div className="flex gap-1 md:gap-3 justify-center items-center lg:gap-4">
                                 <button 
                                     onClick={drawFromDeck} 
                                     disabled={gameState !== 'playing' || activeCard || currentPlayer !== 0 || matchWindowActive}
@@ -882,12 +882,12 @@
                             </button>
 
                             {activeCard && (
-                                <div className="flex flex-col md:flex-row items-center gap-1.5 border-t border-emerald-800 pt-2 w-full justify-center">
+                                <div className="flex flex-col md:flex-row items-center gap-1 border-t border-emerald-800 pt-2 w-full justify-center">
                                     <div className="card-fluid bg-white text-black border border-yellow-400 rounded-lg flex flex-col items-center justify-center font-bold shadow-md">
                                         <div>{activeCard.value}</div>
-                                        <div className="text-xs md:text-sm lg:text-lg">{activeCard.suit}</div>
+                                        <div className="text-[10px] md:text-sm lg:text-lg">{activeCard.suit}</div>
                                     </div>
-                                    <button onClick={discardActive} className="bg-red-600 text-white font-bold text-[10px] md:text-xs px-2 py-1 rounded-md active:scale-90 lg:text-sm lg:px-4 lg:py-2">
+                                    <button onClick={discardActive} className="bg-red-600 text-white font-bold text-[10px] md:text-xs px-1.5 py-1 rounded-md active:scale-90 lg:text-sm lg:px-4 lg:py-2">
                                         Discard
                                     </button>
                                 </div>
@@ -898,12 +898,12 @@
                         <div className="flex flex-col gap-2 items-center justify-center lg:gap-6">
                             {/* P3 (Top Right) */}
                             {players[2] && (
-                                <div className={`flex flex-col items-center bg-emerald-800/40 p-2 md:p-3 rounded-2xl border w-[28vw] md:w-56 transition-all duration-300 tight-padding lg:w-72 lg:p-4 ${currentPlayer === 2 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                <div className={`flex flex-col items-center justify-center bg-emerald-800/40 p-1.5 md:p-3 rounded-2xl border w-[29vw] md:w-56 transition-all duration-300 tight-padding lg:w-72 lg:p-4 ${currentPlayer === 2 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
                                     <div className="flex items-center gap-1.5 mb-1.5">
-                                        <div className={`w-2.5 h-2.5 rounded-full ${readyPlayers[2] ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                        <h2 className="text-xs md:text-sm font-bold text-pink-300 truncate max-w-[85px] laptop-text-large">{players[2].name}</h2>
+                                        <div className={`w-2 h-2 rounded-full ${readyPlayers[2] ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                        <h2 className="text-[10px] md:text-sm font-bold text-pink-300 truncate max-w-[85px] laptop-text-large">{players[2].name}</h2>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-1.5 md:gap-2 lg:gap-4">
+                                    <div className="grid grid-cols-2 gap-1 md:gap-2 lg:gap-4 justify-items-center justify-center">
                                         {players[2].cards.map((card, idx) => {
                                             if (!card) return <div key={idx} className="card-fluid rounded-lg border border-dashed border-emerald-800/40 opacity-30"></div>;
                                             return (
@@ -924,12 +924,12 @@
 
                             {/* P1 (User - Bottom Right) */}
                             {players[0] && (
-                                <div className={`flex flex-col items-center bg-emerald-800/45 p-2 md:p-3 rounded-2xl border w-[28vw] md:w-56 transition-all duration-300 tight-padding lg:w-72 lg:p-4 ${currentPlayer === 0 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                <div className={`flex flex-col items-center justify-center bg-emerald-800/45 p-1.5 md:p-3 rounded-2xl border w-[29vw] md:w-56 transition-all duration-300 tight-padding lg:w-72 lg:p-4 ${currentPlayer === 0 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
                                     <div className="flex items-center gap-1.5 mb-1.5">
-                                        <div className={`w-2.5 h-2.5 rounded-full ${readyPlayers[0] ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                        <h2 className="text-xs md:text-sm font-bold text-green-300 laptop-text-large">You</h2>
+                                        <div className={`w-2 h-2 rounded-full ${readyPlayers[0] ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                        <h2 className="text-[10px] md:text-sm font-bold text-green-300 laptop-text-large">You</h2>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-1.5 md:gap-2 lg:gap-4">
+                                    <div className="grid grid-cols-2 gap-1 md:gap-2 lg:gap-4 justify-items-center justify-center">
                                         {players[0].cards.map((card, idx) => {
                                             if (!card) return <div key={idx} className="card-fluid rounded-lg border border-dashed border-emerald-800/40 opacity-30"></div>;
                                             return (
