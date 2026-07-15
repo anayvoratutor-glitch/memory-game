@@ -15,13 +15,15 @@
     </style>
 </head>
 <body class="bg-emerald-900 min-h-screen text-white p-4 transition-colors duration-500">
-    <div id="root" class="w-full max-w-4xl mx-auto"></div>
+    <div id="root" class="w-full max-w-6xl mx-auto"></div>
 
-    <script type="text/babel">
+    <script type="type/babel">
         const { useState, useEffect, useRef } = React;
 
         const CARD_VALUES = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'Joker'];
         const SUITS = ['♠', '♥', '♦', '♣'];
+        
+        const BOT_NAMES = ["Card Shark 🦈", "Bluff Queen 👑", "Lucky Lucy 🍀", "Dealer Dave 🃏", "Shadow 👤", "Ace ♠️", "Chips 🪙"];
 
         function createDeck() {
             let deck = [];
@@ -47,13 +49,11 @@
         }
 
         function App() {
-            const [gameState, setGameState] = useState('menu'); // 'menu', 'setup', 'playing', 'waiting-ready', 'ended'
+            const [gameState, setGameState] = useState('menu'); // 'menu', 'player-select', 'setup', 'playing', 'waiting-ready', 'ended'
             const [showRules, setShowRules] = useState(false);
+            const [playerCount, setPlayerCount] = useState(2);
             const [deck, setDeck] = useState([]);
-            const [players, setPlayers] = useState([
-                { name: "You (P1)", cards: [] },
-                { name: "Opponent (P2)", cards: [] }
-            ]);
+            const [players, setPlayers] = useState([]);
             const [currentPlayer, setCurrentPlayer] = useState(0);
             const [discardPile, setDiscardPile] = useState([]);
             const [activeCard, setActiveCard] = useState(null);
@@ -65,6 +65,9 @@
             const [swapSelection, setSwapSelection] = useState([]);
             const [matchWindowActive, setMatchWindowActive] = useState(false);
             const [matchCountdown, setMatchCountdown] = useState(0);
+            
+            // Turn tracker: stores true/false for each player's readiness in current cycle
+            const [readyPlayers, setReadyPlayers] = useState([]); 
 
             // Animation States
             const [animatingCard, setAnimatingCard] = useState(null);
@@ -73,16 +76,34 @@
             const aiTimerRef = useRef(null);
             const countdownIntervalRef = useRef(null);
 
-            const startNewGame = () => {
+            const handleStartClick = () => {
+                setGameState('player-select');
+            };
+
+            const setupGameWithPlayers = (count) => {
+                setPlayerCount(count);
                 const newDeck = createDeck();
-                const p1Cards = [newDeck.pop(), newDeck.pop(), newDeck.pop(), newDeck.pop()].map((c, i) => ({...c, visible: false, id: `p1-${i}`}));
-                const p2Cards = [newDeck.pop(), newDeck.pop(), newDeck.pop(), newDeck.pop()].map((c, i) => ({...c, visible: false, id: `p2-${i}`}));
                 
+                // Shuffle name options
+                const shuffledNames = [...BOT_NAMES].sort(() => Math.random() - 0.5);
+
+                const generatedPlayers = [];
+                // Player 1 (User)
+                generatedPlayers.push({
+                    name: "You",
+                    cards: [newDeck.pop(), newDeck.pop(), newDeck.pop(), newDeck.pop()].map((c, i) => ({...c, visible: false, id: `p0-${i}`}))
+                });
+
+                // Add Opponent Bots with fun names
+                for (let i = 1; i < count; i++) {
+                    generatedPlayers.push({
+                        name: shuffledNames[i - 1] || `Bot P${i + 1}`,
+                        cards: [newDeck.pop(), newDeck.pop(), newDeck.pop(), newDeck.pop()].map((c, j) => ({...c, visible: false, id: `p${i}-${j}`}))
+                    });
+                }
+
                 setDeck(newDeck);
-                setPlayers([
-                    { name: "You (P1)", cards: p1Cards },
-                    { name: "Opponent (P2)", cards: p2Cards }
-                ]);
+                setPlayers(generatedPlayers);
                 setDiscardPile([newDeck.pop()]);
                 setActiveCard(null);
                 setCurrentPlayer(0);
@@ -97,6 +118,9 @@
                 setMatchCountdown(0);
                 setAnimatingCard(null);
                 setAnimatingIndices([]);
+                
+                // Initialize readiness: index 0 (user) is not ready, others initialized to false
+                setReadyPlayers(new Array(count).fill(false));
                 clearTimers();
             };
 
@@ -111,14 +135,21 @@
                 if (!updatedCards[index] || updatedCards[index].visible) return;
 
                 updatedCards[index].visible = true;
-                setPlayers([{ ...players[0], cards: updatedCards }, players[1]]);
+                const newPlayers = [...players];
+                newPlayers[0].cards = updatedCards;
+                setPlayers(newPlayers);
                 
                 setPeeksLeft(prev => {
                     const next = prev - 1;
                     if (next === 0) {
                         setTimeout(() => {
                             const hiddenCards = updatedCards.map(c => c ? ({...c, visible: false}) : null);
-                            setPlayers([{ ...players[0], cards: hiddenCards }, players[1]]);
+                            const resetPlayers = [...players];
+                            resetPlayers[0].cards = hiddenCards;
+                            setPlayers(resetPlayers);
+                            
+                            // Ready state reset for turn phase
+                            setReadyPlayers(new Array(playerCount).fill(false));
                             setGameState('playing');
                             setMessage("Your turn! Draw from the deck or take from the discard pile.");
                         }, 2000);
@@ -155,10 +186,13 @@
                     const p1Cards = [...players[0].cards];
                     const swappedOut = p1Cards[index];
                     
-                    p1Cards[index] = { ...activeCard, visible: false, id: `p1-${index}-${Date.now()}` };
+                    p1Cards[index] = { ...activeCard, visible: false, id: `p0-${index}-${Date.now()}` };
                     setDiscardPile(prev => [...prev, swappedOut]);
                     setActiveCard(null);
-                    setPlayers([{ ...players[0], cards: p1Cards }, players[1]]);
+                    
+                    const newPlayers = [...players];
+                    newPlayers[0].cards = p1Cards;
+                    setPlayers(newPlayers);
                     setAnimatingIndices([]);
                     
                     triggerMatchWindow(() => {
@@ -182,7 +216,7 @@
                         setMessage("Power: Click one of YOUR cards to peek!");
                         setGameState('peek-power');
                     } else if (discarded.value === '10') {
-                        setMessage("Power: Click one of your OPPONENT'S cards to spy!");
+                        setMessage(`Power: Click one of your OPPONENT'S cards to spy!`);
                         setGameState('spy-power');
                     } else if (discarded.value === 'J') {
                         setMessage("Power: Jack! Go again! Take another turn immediately.");
@@ -237,17 +271,17 @@
                         } else {
                             const validP1Indices = updatedPlayers[0].cards.map((c, i) => c !== null ? i : null).filter(v => v !== null);
                             if (validP1Indices.length > 0) {
-                                setMessage("Perfect Match! Transferring one of your cards to your opponent...");
+                                setMessage(`Perfect Match! Transferring one of your cards to ${players[pIdx].name}...`);
                                 setTimeout(() => {
                                     const randomP1Index = validP1Indices[Math.floor(Math.random() * validP1Indices.length)];
                                     const givenCard = updatedPlayers[0].cards[randomP1Index];
                                     
-                                    setAnimatingIndices([{ playerIdx: 0, cardIdx: randomP1Index, targetPlayerIdx: 1, targetCardIdx: cIdx }]);
+                                    setAnimatingIndices([{ playerIdx: 0, cardIdx: randomP1Index, targetPlayerIdx: pIdx, targetCardIdx: cIdx }]);
                                     
                                     setTimeout(() => {
                                         const nextPlayers = JSON.parse(JSON.stringify(updatedPlayers));
                                         nextPlayers[0].cards[randomP1Index] = null;
-                                        nextPlayers[1].cards[cIdx] = givenCard;
+                                        nextPlayers[pIdx].cards[cIdx] = givenCard;
                                         setPlayers(nextPlayers);
                                         setAnimatingIndices([]);
                                         setGameState('playing');
@@ -270,7 +304,7 @@
                     const newDeck = [...deck];
                     const penaltyCard = newDeck.pop();
                     const updatedPlayers = JSON.parse(JSON.stringify(players));
-                    updatedPlayers[0].cards.push({ ...penaltyCard, visible: false, id: `p1-penalty-${Date.now()}` });
+                    updatedPlayers[0].cards.push({ ...penaltyCard, visible: false, id: `p0-penalty-${Date.now()}` });
                     setDeck(newDeck);
                     setPlayers(updatedPlayers);
 
@@ -327,7 +361,7 @@
                     });
                 }
 
-                if (gameState === 'spy-power' && pIdx === 1) {
+                if (gameState === 'spy-power' && pIdx !== 0) {
                     revealTemp(pIdx, cIdx, () => {
                         setGameState('playing');
                         triggerMatchWindow(() => {
@@ -345,7 +379,7 @@
                     performSwap(first.playerIdx, first.cardIdx, pIdx, cIdx);
                 }
 
-                if (gameState === 'king-look' && pIdx === 1) {
+                if (gameState === 'king-look' && pIdx !== 0) {
                     revealTemp(pIdx, cIdx, () => {
                         setMessage("Now swap any 2 cards. Click the first card.");
                         setGameState('king-swap-1');
@@ -401,103 +435,144 @@
             };
 
             const prepareNextTurn = () => {
+                // Set current player as "Ready" (Finished their turn actions)
+                const nextReady = [...readyPlayers];
+                nextReady[currentPlayer] = true;
+                setReadyPlayers(nextReady);
+
                 if (showCalledBy !== null) {
                     const nextTurns = turnsAfterShow + 1;
                     setTurnsAfterShow(nextTurns);
-                    if (nextTurns >= 1) {
+                    if (nextTurns >= playerCount - 1) {
                         tallyScores();
                         return;
                     }
                 }
+                
                 setGameState('waiting-ready');
-                setMessage("Turn finished! Press 'Next Turn' when you are ready.");
+                const nextPlayerIdx = (currentPlayer + 1) % playerCount;
+                const nextName = nextPlayerIdx === 0 ? "your" : `${players[nextPlayerIdx].name}'s`;
+                setMessage(`Turn actions complete! Press 'Next Turn' to advance.`);
             };
 
             const handleReadyNextTurn = () => {
-                const nextPlayer = currentPlayer === 0 ? 1 : 0;
+                const nextPlayer = (currentPlayer + 1) % playerCount;
                 setCurrentPlayer(nextPlayer);
+                
+                // If cycling back to player 1, reset all ready lights to red
+                if (nextPlayer === 0) {
+                    setReadyPlayers(new Array(playerCount).fill(false));
+                }
+
                 setGameState('playing');
 
-                if (nextPlayer === 1) {
-                    setMessage("Opponent's turn...");
+                if (nextPlayer !== 0) {
+                    setMessage(`${players[nextPlayer].name}'s turn...`);
                     aiTimerRef.current = setTimeout(() => {
-                        executeAITurn(false);
+                        executeAITurn(nextPlayer, false);
                     }, 1500);
                 } else {
                     setMessage("Your turn! Draw or take discard.");
                 }
             };
 
-            const executeAITurn = (isExtraTurn = false) => {
+            const executeAITurn = (botIdx, isExtraTurn = false) => {
                 const newDeck = [...deck];
                 if (newDeck.length === 0) return;
                 const drawn = newDeck.pop();
                 setDeck(newDeck);
 
-                const p1Valid = players[0].cards.map((c, i) => c !== null ? i : null).filter(v => v !== null);
-                const p2Valid = players[1].cards.map((c, i) => c !== null ? i : null).filter(v => v !== null);
+                const targetablePlayers = players.map((p, i) => ({
+                    playerIdx: i,
+                    validIndices: p.cards.map((c, idx) => c !== null ? idx : null).filter(v => v !== null)
+                })).filter(tp => tp.validIndices.length > 0);
+
+                const ownValid = targetablePlayers.find(tp => tp.playerIdx === botIdx)?.validIndices || [];
 
                 if (['8', '10', 'J', 'Q', 'K'].includes(drawn.value)) {
                     setDiscardPile(prev => [...prev, drawn]);
-                    setMessage(`Opponent discarded ${drawn.value} to activate power!`);
+                    setMessage(`${players[botIdx].name} discarded ${drawn.value} to activate power!`);
                     
                     aiTimerRef.current = setTimeout(() => {
                         if (drawn.value === '8') {
-                            setMessage("Opponent peeked at their own card.");
-                            triggerMatchWindow(() => completeAITurn());
+                            setMessage(`${players[botIdx].name} peeked at their own card.`);
+                            triggerMatchWindow(() => completeAITurn(botIdx));
                         } else if (drawn.value === '10') {
-                            setMessage("Opponent spied on your card.");
-                            triggerMatchWindow(() => completeAITurn());
+                            const otherPlayers = targetablePlayers.filter(tp => tp.playerIdx !== botIdx);
+                            const randomTarget = otherPlayers[Math.floor(Math.random() * otherPlayers.length)];
+                            setMessage(`${players[botIdx].name} spied on ${players[randomTarget.playerIdx].name}'s card.`);
+                            triggerMatchWindow(() => completeAITurn(botIdx));
                         } else if (drawn.value === 'J') {
                             if (!isExtraTurn) {
-                                setMessage("Opponent plays again! (Jack Power)");
-                                aiTimerRef.current = setTimeout(() => { executeAITurn(true); }, 1500); 
+                                setMessage(`${players[botIdx].name} plays again! (Jack Power)`);
+                                aiTimerRef.current = setTimeout(() => { executeAITurn(botIdx, true); }, 1500); 
                             } else {
-                                setMessage("Opponent plays another Jack, but cannot chain extra turns!");
-                                triggerMatchWindow(() => completeAITurn());
+                                setMessage(`${players[botIdx].name} plays another Jack, but cannot chain extra turns!`);
+                                triggerMatchWindow(() => completeAITurn(botIdx));
                             }
                         } else if (drawn.value === 'Q' || drawn.value === 'K') {
-                            if (p1Valid.length > 0 && p2Valid.length > 0) {
-                                performSwap(0, p1Valid[Math.floor(Math.random()*p1Valid.length)], 1, p2Valid[Math.floor(Math.random()*p2Valid.length)]);
+                            const otherPlayers = targetablePlayers.filter(tp => tp.playerIdx !== botIdx);
+                            if (otherPlayers.length > 0 && ownValid.length > 0) {
+                                const targetTP = otherPlayers[Math.floor(Math.random() * otherPlayers.length)];
+                                performSwap(
+                                    botIdx, ownValid[Math.floor(Math.random() * ownValid.length)], 
+                                    targetTP.playerIdx, targetTP.validIndices[Math.floor(Math.random() * targetTP.validIndices.length)]
+                                );
                             } else {
-                                triggerMatchWindow(() => completeAITurn());
+                                triggerMatchWindow(() => completeAITurn(botIdx));
                             }
                         }
                     }, 1500);
                 } else {
-                    if (p2Valid.length > 0) {
-                        const p2Cards = [...players[1].cards];
-                        const swapIdx = p2Valid[Math.floor(Math.random() * p2Valid.length)];
+                    if (ownValid.length > 0) {
+                        const botCards = [...players[botIdx].cards];
+                        const swapIdx = ownValid[Math.floor(Math.random() * ownValid.length)];
                         
-                        setAnimatingIndices([{ playerIdx: 1, cardIdx: swapIdx }]);
+                        setAnimatingIndices([{ playerIdx: botIdx, cardIdx: swapIdx }]);
                         
                         setTimeout(() => {
-                            const swappedOut = p2Cards[swapIdx];
-                            p2Cards[swapIdx] = { ...drawn, visible: false, id: `p2-${swapIdx}-${Date.now()}` };
+                            const swappedOut = botCards[swapIdx];
+                            botCards[swapIdx] = { ...drawn, visible: false, id: `p${botIdx}-${swapIdx}-${Date.now()}` };
                             setDiscardPile(prev => [...prev, swappedOut]);
-                            setPlayers([players[0], { ...players[1], cards: p2Cards }]);
+                            
+                            const nextPlayers = [...players];
+                            nextPlayers[botIdx].cards = botCards;
+                            setPlayers(nextPlayers);
                             setAnimatingIndices([]);
-                            setMessage("Opponent swapped a card.");
-                            triggerMatchWindow(() => completeAITurn());
+                            setMessage(`${players[botIdx].name} swapped a card.`);
+                            triggerMatchWindow(() => completeAITurn(botIdx));
                         }, 350);
                     } else {
-                        triggerMatchWindow(() => completeAITurn());
+                        triggerMatchWindow(() => completeAITurn(botIdx));
                     }
                 }
             };
 
-            const completeAITurn = () => {
-                const aiScore = players[1].cards.reduce((sum, c) => sum + getCardPoints(c), 0);
-                if (aiScore <= 5 && showCalledBy === null) {
-                    setMessage("Opponent yelled SHOW! Final turn!");
-                    setShowCalledBy(1);
+            const completeAITurn = (botIdx) => {
+                // Set this bot as ready
+                const nextReady = [...readyPlayers];
+                nextReady[botIdx] = true;
+                setReadyPlayers(nextReady);
+
+                const botScore = players[botIdx].cards.reduce((sum, c) => sum + getCardPoints(c), 0);
+                if (botScore <= 5 && showCalledBy === null) {
+                    setMessage(`${players[botIdx].name} yelled SHOW! Final turn cycle!`);
+                    setShowCalledBy(botIdx);
                     setGameState('waiting-ready');
                 } else {
                     if (showCalledBy !== null) {
-                        tallyScores();
+                        const nextTurns = turnsAfterShow + 1;
+                        setTurnsAfterShow(nextTurns);
+                        if (nextTurns >= playerCount - 1) {
+                            tallyScores();
+                        } else {
+                            setGameState('waiting-ready');
+                        }
                     } else {
                         setGameState('waiting-ready');
-                        setMessage("Opponent turn over. Click 'Next Turn' to start yours.");
+                        const nextPlayerIdx = (currentPlayer + 1) % playerCount;
+                        const nextName = nextPlayerIdx === 0 ? "your" : `${players[nextPlayerIdx].name}'s`;
+                        setMessage(`${players[botIdx].name} turn over. Click 'Next Turn' to advance.`);
                     }
                 }
             };
@@ -505,27 +580,35 @@
             const callShow = () => {
                 if (showCalledBy !== null) return;
                 setShowCalledBy(0);
-                setMessage("You yelled SHOW! Opponent gets one final turn.");
+                setMessage("You yelled SHOW! Other players get one final turn.");
                 prepareNextTurn();
             };
 
             const tallyScores = () => {
-                const p1Score = players[0].cards.reduce((sum, c) => sum + getCardPoints(c), 0);
-                const p2Score = players[1].cards.reduce((sum, c) => sum + getCardPoints(c), 0);
+                const finalPlayers = players.map(p => ({
+                    ...p,
+                    cards: p.cards.map(c => c ? ({...c, visible: true}) : null)
+                }));
                 
-                const p1Final = players[0].cards.map(c => c ? ({...c, visible: true}) : null);
-                const p2Final = players[1].cards.map(c => c ? ({...c, visible: true}) : null);
-                
-                setPlayers([
-                    { ...players[0], cards: p1Final },
-                    { ...players[1], cards: p2Final }
-                ]);
-                setScores({ p1: p1Score, p2: p2Score });
+                const calculatedScores = players.map(p => 
+                    p.cards.reduce((sum, c) => sum + getCardPoints(c), 0)
+                );
+
+                setPlayers(finalPlayers);
+                setScores(calculatedScores);
                 setGameState('ended');
-                setMessage(p1Score < p2Score ? "You win!" : (p1Score === p2Score ? "Tie!" : "Opponent wins!"));
+
+                const minScore = Math.min(...calculatedScores);
+                const winners = [];
+                calculatedScores.forEach((score, idx) => {
+                    if (score === minScore) winners.push(idx === 0 ? "You" : players[idx].name);
+                });
+
+                setMessage(`Game Over! Winner: ${winners.join(" & ")} with ${minScore} points!`);
             };
 
             const getActiveCount = (playerIdx) => {
+                if (!players[playerIdx]) return 0;
                 return players[playerIdx].cards.filter(c => c !== null).length;
             };
 
@@ -534,25 +617,23 @@
                 if (!anim) return '';
 
                 if (anim.action === 'burn') {
-                    return playerIdx === 0 
-                        ? '-translate-y-24 scale-75 opacity-20' 
-                        : 'translate-y-24 scale-75 opacity-20';
+                    return 'scale-50 opacity-0 translate-y-8';
                 }
 
                 if (anim.targetPlayerIdx !== undefined) {
-                    const samePlayer = anim.targetPlayerIdx === playerIdx;
-                    if (!samePlayer) {
-                        return playerIdx === 0 ? '-translate-y-64 rotate-12 scale-95' : 'translate-y-64 -rotate-12 scale-95';
-                    } else {
-                        const isLeft = cardIdx % 2 === 0;
-                        return isLeft ? 'translate-x-12' : '-translate-x-12';
-                    }
+                    return 'scale-90 opacity-40 rotate-12';
                 }
 
                 return 'scale-90 opacity-40';
             };
 
-            // Main Menu Render Screen
+            // Calculate active turn fraction (e.g. 1/3 Ready)
+            const getReadyCountFraction = () => {
+                const completed = readyPlayers.filter(r => r === true).length;
+                return `${completed}/${playerCount} Ready`;
+            };
+
+            // Main Menu Screen
             if (gameState === 'menu') {
                 return (
                     <div className="flex flex-col items-center justify-center min-h-screen text-center px-4">
@@ -562,7 +643,7 @@
                             
                             <div className="flex flex-col gap-4">
                                 <button 
-                                    onClick={startNewGame}
+                                    onClick={handleStartClick}
                                     className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black py-4 px-8 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95 text-lg"
                                 >
                                     🎮 START GAME
@@ -579,7 +660,7 @@
 
                         {/* Rules Popup */}
                         {showRules && (
-                            <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50 animate-fade-in">
+                            <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
                                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full max-h-[85vh] overflow-y-auto text-left shadow-2xl">
                                     <h2 className="text-2xl font-black text-yellow-400 mb-4 flex justify-between items-center">
                                         <span>How to Play</span>
@@ -621,38 +702,105 @@
                 );
             }
 
+            // Player Count Selector Screen
+            if (gameState === 'player-select') {
+                return (
+                    <div className="flex flex-col items-center justify-center min-h-screen text-center px-4">
+                        <div className="bg-emerald-950/80 border border-emerald-800 p-8 rounded-3xl shadow-2xl max-w-md w-full backdrop-blur-md">
+                            <h2 className="text-3xl font-black text-yellow-400 mb-2">Number of Players</h2>
+                            <p className="text-emerald-200 text-sm mb-6">Choose how many opponents you want to face.</p>
+                            
+                            <div className="grid grid-cols-3 gap-4">
+                                {[2, 3, 4].map(num => (
+                                    <button 
+                                        key={num}
+                                        onClick={() => setupGameWithPlayers(num)}
+                                        className="bg-emerald-800 hover:bg-yellow-500 hover:text-slate-950 text-white font-black py-4 rounded-2xl shadow-lg border border-emerald-600 transition-all duration-300 text-2xl transform hover:scale-105 active:scale-95"
+                                    >
+                                        {num}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <button 
+                                onClick={() => setGameState('menu')}
+                                className="mt-8 text-emerald-400 hover:text-white text-sm underline underline-offset-4"
+                            >
+                                Back to Main Menu
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
             return (
                 <div className="flex flex-col min-h-screen justify-between py-6 select-none">
                     <div className="text-center">
                         <h1 className="text-4xl font-extrabold tracking-widest text-yellow-400 drop-shadow">MEMORY CARD GAME</h1>
-                        <p className="text-sm text-emerald-200 mt-1">Memory Grid Edition</p>
+                        <p className="text-sm text-emerald-200 mt-1">{playerCount} Player Game Mode</p>
                     </div>
 
-                    <div className="w-full flex flex-col md:flex-row justify-around items-center my-6 gap-6">
-                        {/* Opponent (P2) */}
-                        <div className="flex flex-col items-center bg-emerald-800/50 p-4 rounded-xl border border-emerald-700 w-80 transition-all duration-300">
-                            <h2 className="text-lg font-semibold mb-3 text-red-300">Opponent ({getActiveCount(1)} Cards)</h2>
-                            <div className="grid grid-cols-2 gap-3">
-                                {players[1].cards.map((card, idx) => {
-                                    if (!card) return <div key={idx} className="w-20 h-28 rounded-lg border-2 border-dashed border-emerald-800/40 transition-all duration-300 scale-95 opacity-50"></div>;
-                                    const animClass = getAnimationClass(1, idx);
-                                    return (
-                                        <div 
-                                            key={card.id || idx} 
-                                            onClick={() => handleCardClick(1, idx)}
-                                            className={`w-20 h-28 rounded-lg flex items-center justify-center font-bold text-xl cursor-pointer border-2 card-transition transform hover:scale-105 active:scale-95 shadow-lg ${animClass} ${
-                                                card.visible ? 'bg-white text-black border-yellow-400 rotate-0' : 'bg-blue-800 border-white text-white hover:bg-blue-700'
-                                            }`}
-                                        >
-                                            {card.visible ? `${card.value}${card.suit}` : "?"}
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                    {/* Multi-Player Dynamic Hands Grid */}
+                    <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-6 my-6 items-center">
+                        
+                        {/* Column 1: Opponents (Bots P2 & P4) */}
+                        <div className="flex flex-col gap-6 items-center">
+                            {/* P2 */}
+                            {players[1] && (
+                                <div className={`flex flex-col items-center bg-emerald-800/50 p-4 rounded-xl border w-72 transition-all duration-300 ${currentPlayer === 1 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        {/* Red/Green light turn indicator */}
+                                        <div className={`w-3 h-3 rounded-full ${readyPlayers[1] ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                                        <h2 className="text-md font-semibold text-red-300">{players[1].name} ({getActiveCount(1)} Cards)</h2>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {players[1].cards.map((card, idx) => {
+                                            if (!card) return <div key={idx} className="w-16 h-24 rounded-lg border-2 border-dashed border-emerald-800/40 opacity-40"></div>;
+                                            return (
+                                                <div 
+                                                    key={card.id || idx} 
+                                                    onClick={() => handleCardClick(1, idx)}
+                                                    className={`w-16 h-24 rounded-lg flex items-center justify-center font-bold text-lg cursor-pointer border-2 card-transition transform hover:scale-105 shadow-md ${
+                                                        card.visible ? 'bg-white text-black border-yellow-400' : 'bg-blue-800 border-white text-white'
+                                                    } ${getAnimationClass(1, idx)}`}
+                                                >
+                                                    {card.visible ? `${card.value}${card.suit}` : "?"}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* P4 (Only appears in 4 player mode) */}
+                            {players[3] && (
+                                <div className={`flex flex-col items-center bg-emerald-800/50 p-4 rounded-xl border w-72 transition-all duration-300 ${currentPlayer === 3 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className={`w-3 h-3 rounded-full ${readyPlayers[3] ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                                        <h2 className="text-md font-semibold text-purple-300">{players[3].name} ({getActiveCount(3)} Cards)</h2>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {players[3].cards.map((card, idx) => {
+                                            if (!card) return <div key={idx} className="w-16 h-24 rounded-lg border-2 border-dashed border-emerald-800/40 opacity-40"></div>;
+                                            return (
+                                                <div 
+                                                    key={card.id || idx} 
+                                                    onClick={() => handleCardClick(3, idx)}
+                                                    className={`w-16 h-24 rounded-lg flex items-center justify-center font-bold text-lg cursor-pointer border-2 card-transition transform hover:scale-105 shadow-md ${
+                                                        card.visible ? 'bg-white text-black border-yellow-400' : 'bg-blue-800 border-white text-white'
+                                                    } ${getAnimationClass(3, idx)}`}
+                                                >
+                                                    {card.visible ? `${card.value}${card.suit}` : "?"}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
-                        {/* Center Pile */}
-                        <div className="flex flex-col items-center gap-4 bg-emerald-950/60 p-5 rounded-2xl border border-emerald-800 transition-all duration-300">
+                        {/* Column 2: Draw & Discard Piles */}
+                        <div className="flex flex-col items-center gap-4 bg-emerald-950/60 p-5 rounded-2xl border border-emerald-800">
                             <div className="flex gap-6 relative">
                                 <button 
                                     onClick={drawFromDeck} 
@@ -697,33 +845,72 @@
                             )}
                         </div>
 
-                        {/* Player (P1) */}
-                        <div className="flex flex-col items-center bg-emerald-800/50 p-4 rounded-xl border border-emerald-700 w-80 transition-all duration-300">
-                            <h2 className="text-lg font-semibold mb-3 text-green-300">Your Hand ({getActiveCount(0)} Cards)</h2>
-                            <div className="grid grid-cols-2 gap-3">
-                                {players[0].cards.map((card, idx) => {
-                                    if (!card) return <div key={idx} className="w-20 h-28 rounded-lg border-2 border-dashed border-emerald-800/40 transition-all duration-300 scale-95 opacity-50"></div>;
-                                    const animClass = getAnimationClass(0, idx);
-                                    return (
-                                        <div 
-                                            key={card.id || idx} 
-                                            onClick={() => handleCardClick(0, idx)}
-                                            className={`w-20 h-28 rounded-lg flex items-center justify-center font-bold text-xl cursor-pointer border-2 card-transition transform hover:scale-105 hover:-translate-y-1 active:scale-95 shadow-lg ${animClass} ${
-                                                card.visible || (activeCard && gameState === 'playing')
-                                                    ? 'bg-white text-black border-yellow-400 rotate-0' 
-                                                    : 'bg-red-800 border-white text-white hover:bg-red-700'
-                                            }`}
-                                        >
-                                            {card.visible ? `${card.value}${card.suit}` : (activeCard ? "Swap" : "?")}
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                        {/* Column 3: Opponent P3 (appears in 3 and 4 player mode) & Player P1 */}
+                        <div className="flex flex-col gap-6 items-center">
+                            {/* P3 */}
+                            {players[2] && (
+                                <div className={`flex flex-col items-center bg-emerald-800/50 p-4 rounded-xl border w-72 transition-all duration-300 ${currentPlayer === 2 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className={`w-3 h-3 rounded-full ${readyPlayers[2] ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                                        <h2 className="text-md font-semibold text-pink-300">{players[2].name} ({getActiveCount(2)} Cards)</h2>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {players[2].cards.map((card, idx) => {
+                                            if (!card) return <div key={idx} className="w-16 h-24 rounded-lg border-2 border-dashed border-emerald-800/40 opacity-40"></div>;
+                                            return (
+                                                <div 
+                                                    key={card.id || idx} 
+                                                    onClick={() => handleCardClick(2, idx)}
+                                                    className={`w-16 h-24 rounded-lg flex items-center justify-center font-bold text-lg cursor-pointer border-2 card-transition transform hover:scale-105 shadow-md ${
+                                                        card.visible ? 'bg-white text-black border-yellow-400' : 'bg-blue-800 border-white text-white'
+                                                    } ${getAnimationClass(2, idx)}`}
+                                                >
+                                                    {card.visible ? `${card.value}${card.suit}` : "?"}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* P1 (User) */}
+                            {players[0] && (
+                                <div className={`flex flex-col items-center bg-emerald-800/50 p-4 rounded-xl border w-72 transition-all duration-300 ${currentPlayer === 0 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className={`w-3 h-3 rounded-full ${readyPlayers[0] ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                                        <h2 className="text-md font-semibold text-green-300">Your Hand ({getActiveCount(0)} Cards)</h2>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {players[0].cards.map((card, idx) => {
+                                            if (!card) return <div key={idx} className="w-16 h-24 rounded-lg border-2 border-dashed border-emerald-800/40 opacity-40"></div>;
+                                            return (
+                                                <div 
+                                                    key={card.id || idx} 
+                                                    onClick={() => handleCardClick(0, idx)}
+                                                    className={`w-16 h-24 rounded-lg flex items-center justify-center font-bold text-lg cursor-pointer border-2 card-transition transform hover:scale-105 hover:-translate-y-1 shadow-md ${
+                                                        card.visible || (activeCard && gameState === 'playing')
+                                                            ? 'bg-white text-black border-yellow-400' 
+                                                            : 'bg-red-800 border-white text-white'
+                                                    } ${getAnimationClass(0, idx)}`}
+                                                >
+                                                    {card.visible ? `${card.value}${card.suit}` : (activeCard ? "Swap" : "?")}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </div>
+
                     </div>
 
-                    {/* Turn Flow Button Block */}
+                    {/* Ready & Info Turn Box */}
                     <div className="w-full max-w-xl mx-auto flex flex-col items-center gap-3 bg-black/40 border border-emerald-800 rounded-2xl p-4 text-center my-4 transition-all duration-300">
+                        {gameState !== 'setup' && (
+                            <div className="bg-emerald-950 px-3 py-1 rounded-full text-xs font-black tracking-widest text-yellow-400 border border-emerald-800">
+                                🔄 {getReadyCountFraction()}
+                            </div>
+                        )}
                         <p className="text-md font-medium text-white">{message}</p>
                         
                         {gameState === 'waiting-ready' && (
@@ -736,16 +923,19 @@
                         )}
                     </div>
 
-                    <div className="w-full flex flex-col sm:flex-row justify-between items-center bg-emerald-950 p-4 rounded-xl gap-4 transition-all duration-300">
+                    <div className="w-full flex flex-col sm:flex-row justify-between items-center bg-emerald-950 p-4 rounded-xl gap-4">
                         <div className="flex gap-4">
-                            <button onClick={() => setGameState('menu')} className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-2 px-6 rounded-lg transition-all duration-300 transform active:scale-95">Menu</button>
-                            <button onClick={startNewGame} className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-extrabold py-2 px-6 rounded-lg transition-all duration-300 transform active:scale-95">Restart</button>
-                            <button onClick={callShow} disabled={gameState !== 'playing' || showCalledBy !== null || matchWindowActive} className="bg-orange-600 hover:bg-orange-500 text-white font-extrabold py-2 px-6 rounded-lg disabled:opacity-50 transition-all duration-300 transform active:scale-95">Show!</button>
+                            <button onClick={() => setGameState('menu')} className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-2 px-6 rounded-lg">Menu</button>
+                            <button onClick={handleStartClick} className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-extrabold py-2 px-6 rounded-lg">Restart</button>
+                            <button onClick={callShow} disabled={gameState !== 'playing' || showCalledBy !== null || matchWindowActive} className="bg-orange-600 hover:bg-orange-500 text-white font-extrabold py-2 px-6 rounded-lg disabled:opacity-50">Show!</button>
                         </div>
                         {scores ? (
-                            <div className="flex gap-6 text-lg font-bold">
-                                <span className="text-green-300">You: {scores.p1}</span>
-                                <span className="text-red-300">Opponent: {scores.p2}</span>
+                            <div className="flex flex-wrap gap-4 text-sm font-bold justify-center">
+                                {scores.map((score, idx) => (
+                                    <span key={idx} className={idx === 0 ? "text-green-300" : "text-red-300"}>
+                                        {idx === 0 ? "You" : players[idx].name}: {score}
+                                    </span>
+                                ))}
                             </div>
                         ) : (
                             <div className="text-xs text-emerald-400">Joker (-1) | 7 (0) | J (11) | Q (12) | K (13)</div>
