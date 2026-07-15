@@ -20,39 +20,38 @@
             height: 100%;
         }
 
-        /* 🚀 BALANCED FLUID CARD SIZES 🚀 */
+        /* 🚀 PHONE VIEW: COMPACT & SCROLL-FREE 🚀 */
         .card-fluid {
-            /* Default: Balanced phone layout */
-            width: 12.5vw;
-            height: 17.5vw;
-            max-width: 60px;
-            max-height: 84px;
+            width: 13vw;
+            height: 18.5vw;
+            max-width: 62px;
+            max-height: 88px;
             min-width: 38px;
             min-height: 54px;
-            font-size: 0.8rem;
+            font-size: 0.85rem;
         }
 
         .pile-fluid {
-            width: 14vw;
-            height: 19vw;
-            max-width: 68px;
-            max-height: 96px;
+            width: 15vw;
+            height: 21vw;
+            max-width: 72px;
+            max-height: 100px;
             min-width: 44px;
             min-height: 62px;
         }
 
-        /* Laptop & Large Desktop Screens: Make cards normal and large */
+        /* 💻 LAPTOP & DESKTOP VIEWS: LARGE & BEAUTIFUL 💻 */
         @media (min-width: 1024px) {
             .card-fluid {
-                width: 5rem;
-                height: 7.25rem;
+                width: 7.5rem;
+                height: 10.5rem;
                 max-width: none;
                 max-height: none;
-                font-size: 1.25rem;
+                font-size: 1.75rem;
             }
             .pile-fluid {
-                width: 5.75rem;
-                height: 8.25rem;
+                width: 8.5rem;
+                height: 12rem;
                 max-width: none;
                 max-height: none;
             }
@@ -61,13 +60,13 @@
         /* Mobile Landscape (Short vertical screens) */
         @media (max-height: 480px) {
             .card-fluid {
-                width: 10vh;
-                height: 14.5vh;
-                font-size: 0.7rem;
+                width: 10.5vh;
+                height: 15vh;
+                font-size: 0.75rem;
             }
             .pile-fluid {
-                width: 11.5vh;
-                height: 16.5vh;
+                width: 12vh;
+                height: 17vh;
             }
             .hide-on-short {
                 display: none !important;
@@ -78,8 +77,8 @@
         }
     </style>
 </head>
-<body class="bg-emerald-900 text-white p-1 sm:p-4 transition-colors duration-500 h-full flex flex-col justify-center">
-    <div id="root" class="w-full max-w-5xl mx-auto h-full flex flex-col justify-between"></div>
+<body class="bg-emerald-900 text-white p-2 sm:p-6 transition-colors duration-500 h-full flex flex-col justify-center">
+    <div id="root" class="w-full max-w-6xl mx-auto h-full flex flex-col justify-between"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
@@ -690,21 +689,21 @@
             if (gameState === 'menu') {
                 return (
                     <div className="flex flex-col items-center justify-center min-h-[90vh] text-center px-4">
-                        <div className="bg-emerald-950/80 border border-emerald-800 p-6 rounded-3xl shadow-2xl max-w-sm w-full backdrop-blur-md">
+                        <div className="bg-emerald-950/80 border border-emerald-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full backdrop-blur-md">
                             <h1 className="text-3xl font-extrabold tracking-wider text-yellow-400 drop-shadow mb-1">MEMORY GRID</h1>
-                            <p className="text-emerald-200 text-xs mb-6">Truly Fluid Adaptive Edition</p>
+                            <p className="text-emerald-200 text-xs mb-6 font-semibold">Adaptive Desktop & Mobile Edition</p>
                             
                             <div className="flex flex-col gap-3">
                                 <button 
                                     onClick={handleStartClick}
-                                    className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black py-3 px-6 rounded-xl shadow-lg transition-all duration-300"
+                                    className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black py-4 px-6 rounded-xl shadow-lg transition-all duration-300 text-lg"
                                 >
                                     🎮 START GAME
                                 </button>
                                 
                                 <button 
                                     onClick={() => setShowRules(true)}
-                                    className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-2 px-6 rounded-xl border border-emerald-600 text-sm transition-all duration-300"
+                                    className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-xl border border-emerald-600 text-sm transition-all duration-300"
                                 >
                                     📖 HOW TO PLAY
                                 </button>
@@ -745,55 +744,55 @@
             if (gameState === 'player-select') {
                 return (
                     <div className="flex flex-col items-center justify-center min-h-[90vh] text-center px-4">
-                        <div className="bg-emerald-950/80 border border-emerald-800 p-6 rounded-3xl shadow-2xl max-w-sm w-full backdrop-blur-md">
+                        <div className="bg-emerald-950/80 border border-emerald-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full backdrop-blur-md">
                             <h2 className="text-2xl font-black text-yellow-400 mb-1">Players</h2>
-                            <p className="text-emerald-200 text-xs mb-5">Select player count</p>
+                            <p className="text-emerald-200 text-xs mb-5 font-semibold">Select player count</p>
                             
                             <div className="grid grid-cols-3 gap-3">
                                 {[2, 3, 4].map(num => (
                                     <button 
                                         key={num}
                                         onClick={() => setupGameWithPlayers(num)}
-                                        className="bg-emerald-800 hover:bg-yellow-500 hover:text-slate-950 text-white font-black py-3 rounded-xl border border-emerald-600 text-xl transition-all duration-300"
+                                        className="bg-emerald-800 hover:bg-yellow-500 hover:text-slate-950 text-white font-black py-4 rounded-xl border border-emerald-600 text-2xl transition-all duration-300"
                                     >
                                         {num}
                                     </button>
                                 ))}
                             </div>
-                            <button onClick={() => setGameState('menu')} className="mt-6 text-emerald-400 text-xs underline">Back</button>
+                            <button onClick={() => setGameState('menu')} className="mt-6 text-emerald-400 text-xs underline font-bold">Back</button>
                         </div>
                     </div>
                 );
             }
 
             return (
-                <div className="flex flex-col justify-between h-full py-1">
+                <div className="flex flex-col justify-between h-full py-2">
                     
-                    {/* Tiny Header: Hidden completely on short screens */}
-                    <div className="text-center mb-1 hide-on-short">
-                        <h1 className="text-lg md:text-2xl font-black text-yellow-400 tracking-wider">MEMORY GRID</h1>
+                    {/* Header */}
+                    <div className="text-center mb-2 hide-on-short">
+                        <h1 className="text-xl md:text-3xl font-black text-yellow-400 tracking-wider">MEMORY GRID</h1>
                     </div>
 
                     {/* Responsive Dynamic Grid layout */}
-                    <div className="w-full flex flex-row justify-around items-center gap-1 max-w-5xl mx-auto px-1">
+                    <div className="w-full flex flex-row justify-around items-center gap-2 max-w-5xl mx-auto px-2">
                         
                         {/* LEFT PLAYER COLUMN */}
-                        <div className="flex flex-col gap-1 items-center justify-center">
+                        <div className="flex flex-col gap-2 items-center justify-center">
                             {/* P2 (Left Side) */}
                             {players[1] && (
-                                <div className={`flex flex-col items-center bg-emerald-800/40 p-1 md:p-2 rounded-xl border w-[28vw] md:w-44 transition-all duration-300 tight-padding ${currentPlayer === 1 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
-                                    <div className="flex items-center gap-1 mb-0.5">
-                                        <div className={`w-1.5 h-1.5 rounded-full ${readyPlayers[1] ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                        <h2 className="text-[10px] font-semibold text-red-300 truncate max-w-[65px]">{players[1].name}</h2>
+                                <div className={`flex flex-col items-center bg-emerald-800/40 p-2 md:p-3 rounded-2xl border w-[28vw] md:w-56 transition-all duration-300 tight-padding ${currentPlayer === 1 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                    <div className="flex items-center gap-1.5 mb-1.5">
+                                        <div className={`w-2.5 h-2.5 rounded-full ${readyPlayers[1] ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                        <h2 className="text-xs md:text-sm font-bold text-red-300 truncate max-w-[85px]">{players[1].name}</h2>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-1">
+                                    <div className="grid grid-cols-2 gap-1.5 md:gap-2">
                                         {players[1].cards.map((card, idx) => {
-                                            if (!card) return <div key={idx} className="card-fluid rounded border border-dashed border-emerald-800/40 opacity-30"></div>;
+                                            if (!card) return <div key={idx} className="card-fluid rounded-lg border border-dashed border-emerald-800/40 opacity-30"></div>;
                                             return (
                                                 <div 
                                                     key={card.id || idx} 
                                                     onClick={() => handleCardClick(1, idx)}
-                                                    className={`card-fluid rounded flex items-center justify-center font-bold cursor-pointer border card-transition transform active:scale-95 shadow-sm ${
+                                                    className={`card-fluid rounded-lg flex items-center justify-center font-bold cursor-pointer border card-transition transform active:scale-95 shadow-md ${
                                                         card.visible ? 'bg-white text-black border-yellow-400' : 'bg-blue-800 border-white text-white'
                                                     } ${getAnimationClass(1, idx)}`}
                                                 >
@@ -807,19 +806,19 @@
 
                             {/* P4 (Four Players Bottom Left) */}
                             {players[3] && (
-                                <div className={`flex flex-col items-center bg-emerald-800/40 p-1 md:p-2 rounded-xl border w-[28vw] md:w-44 transition-all duration-300 tight-padding ${currentPlayer === 3 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
-                                    <div className="flex items-center gap-1 mb-0.5">
-                                        <div className={`w-1.5 h-1.5 rounded-full ${readyPlayers[3] ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                        <h2 className="text-[10px] font-semibold text-purple-300 truncate max-w-[65px]">{players[3].name}</h2>
+                                <div className={`flex flex-col items-center bg-emerald-800/40 p-2 md:p-3 rounded-2xl border w-[28vw] md:w-56 transition-all duration-300 tight-padding ${currentPlayer === 3 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                    <div className="flex items-center gap-1.5 mb-1.5">
+                                        <div className={`w-2.5 h-2.5 rounded-full ${readyPlayers[3] ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                        <h2 className="text-xs md:text-sm font-bold text-purple-300 truncate max-w-[85px]">{players[3].name}</h2>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-1">
+                                    <div className="grid grid-cols-2 gap-1.5 md:gap-2">
                                         {players[3].cards.map((card, idx) => {
-                                            if (!card) return <div key={idx} className="card-fluid rounded border border-dashed border-emerald-800/40 opacity-30"></div>;
+                                            if (!card) return <div key={idx} className="card-fluid rounded-lg border border-dashed border-emerald-800/40 opacity-30"></div>;
                                             return (
                                                 <div 
                                                     key={card.id || idx} 
                                                     onClick={() => handleCardClick(3, idx)}
-                                                    className={`card-fluid rounded flex items-center justify-center font-bold cursor-pointer border card-transition transform active:scale-95 shadow-sm ${
+                                                    className={`card-fluid rounded-lg flex items-center justify-center font-bold cursor-pointer border card-transition transform active:scale-95 shadow-md ${
                                                         card.visible ? 'bg-white text-black border-yellow-400' : 'bg-blue-800 border-white text-white'
                                                     } ${getAnimationClass(3, idx)}`}
                                                 >
@@ -833,19 +832,19 @@
                         </div>
 
                         {/* CENTER PILING BOX */}
-                        <div className="flex flex-col items-center gap-1 bg-emerald-950/60 p-1 md:p-3 rounded-xl border border-emerald-800 w-[24vw] md:w-36 tight-padding">
-                            <div className="flex gap-1 md:gap-2 justify-center items-center">
+                        <div className="flex flex-col items-center gap-2 bg-emerald-950/60 p-2 md:p-4 rounded-2xl border border-emerald-800 w-[26vw] md:w-48 tight-padding">
+                            <div className="flex gap-1.5 md:gap-3 justify-center items-center">
                                 <button 
                                     onClick={drawFromDeck} 
                                     disabled={gameState !== 'playing' || activeCard || currentPlayer !== 0 || matchWindowActive}
-                                    className="pile-fluid bg-red-800 border border-white rounded flex items-center justify-center font-bold text-white disabled:opacity-30 text-lg active:scale-95 shadow-md"
+                                    className="pile-fluid bg-red-800 border border-white rounded-lg flex items-center justify-center font-bold text-white disabled:opacity-30 text-2xl active:scale-95 shadow-md"
                                 >
                                     🂠
                                 </button>
                                 <button 
                                     onClick={drawFromDiscard}
                                     disabled={gameState !== 'playing' || activeCard || discardPile.length === 0 || currentPlayer !== 0 || matchWindowActive}
-                                    className="pile-fluid bg-white text-black border border-yellow-400 rounded flex items-center justify-center font-bold text-xs md:text-sm disabled:opacity-30 active:scale-95 shadow-md"
+                                    className="pile-fluid bg-white text-black border border-yellow-400 rounded-lg flex items-center justify-center font-bold text-sm md:text-lg disabled:opacity-30 active:scale-95 shadow-md"
                                 >
                                     {discardPile.length > 0 ? `${discardPile[discardPile.length - 1].value}${discardPile[discardPile.length - 1].suit}` : "Empty"}
                                 </button>
@@ -854,9 +853,9 @@
                             <button
                                 onClick={enterMatchMode}
                                 disabled={discardPile.length === 0 || gameState === 'setup' || gameState === 'ended'}
-                                className={`w-full text-white font-black py-0.5 md:py-1 rounded text-[9px] md:text-xs ${
+                                className={`w-full text-white font-black py-1.5 md:py-2 rounded-lg text-xs md:text-sm ${
                                     matchWindowActive 
-                                        ? 'bg-yellow-500 text-slate-900 animate-pulse ring-1 ring-yellow-300' 
+                                        ? 'bg-yellow-500 text-slate-900 animate-pulse ring-2 ring-yellow-300' 
                                         : 'bg-red-600 disabled:opacity-50'
                                 }`}
                             >
@@ -864,12 +863,12 @@
                             </button>
 
                             {activeCard && (
-                                <div className="flex flex-col md:flex-row items-center gap-1 border-t border-emerald-800 pt-1 w-full justify-center">
-                                    <div className="card-fluid bg-white text-black border border-yellow-400 rounded flex flex-col items-center justify-center font-bold shadow-sm">
+                                <div className="flex flex-col md:flex-row items-center gap-1.5 border-t border-emerald-800 pt-2 w-full justify-center">
+                                    <div className="card-fluid bg-white text-black border border-yellow-400 rounded-lg flex flex-col items-center justify-center font-bold shadow-md">
                                         <div>{activeCard.value}</div>
-                                        <div className="text-[10px]">{activeCard.suit}</div>
+                                        <div className="text-xs md:text-sm">{activeCard.suit}</div>
                                     </div>
-                                    <button onClick={discardActive} className="bg-red-600 text-white font-bold text-[8px] md:text-[10px] px-1 py-0.5 rounded active:scale-90">
+                                    <button onClick={discardActive} className="bg-red-600 text-white font-bold text-[10px] md:text-xs px-2 py-1 rounded-md active:scale-90">
                                         Discard
                                     </button>
                                 </div>
@@ -877,22 +876,22 @@
                         </div>
 
                         {/* RIGHT PLAYER COLUMN */}
-                        <div className="flex flex-col gap-1 items-center justify-center">
+                        <div className="flex flex-col gap-2 items-center justify-center">
                             {/* P3 (Top Right) */}
                             {players[2] && (
-                                <div className={`flex flex-col items-center bg-emerald-800/40 p-1 md:p-2 rounded-xl border w-[28vw] md:w-44 transition-all duration-300 tight-padding ${currentPlayer === 2 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
-                                    <div className="flex items-center gap-1 mb-0.5">
-                                        <div className={`w-1.5 h-1.5 rounded-full ${readyPlayers[2] ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                        <h2 className="text-[10px] font-semibold text-pink-300 truncate max-w-[65px]">{players[2].name}</h2>
+                                <div className={`flex flex-col items-center bg-emerald-800/40 p-2 md:p-3 rounded-2xl border w-[28vw] md:w-56 transition-all duration-300 tight-padding ${currentPlayer === 2 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                    <div className="flex items-center gap-1.5 mb-1.5">
+                                        <div className={`w-2.5 h-2.5 rounded-full ${readyPlayers[2] ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                        <h2 className="text-xs md:text-sm font-bold text-pink-300 truncate max-w-[85px]">{players[2].name}</h2>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-1">
+                                    <div className="grid grid-cols-2 gap-1.5 md:gap-2">
                                         {players[2].cards.map((card, idx) => {
-                                            if (!card) return <div key={idx} className="card-fluid rounded border border-dashed border-emerald-800/40 opacity-30"></div>;
+                                            if (!card) return <div key={idx} className="card-fluid rounded-lg border border-dashed border-emerald-800/40 opacity-30"></div>;
                                             return (
                                                 <div 
                                                     key={card.id || idx} 
                                                     onClick={() => handleCardClick(2, idx)}
-                                                    className={`card-fluid rounded flex items-center justify-center font-bold cursor-pointer border card-transition transform active:scale-95 shadow-sm ${
+                                                    className={`card-fluid rounded-lg flex items-center justify-center font-bold cursor-pointer border card-transition transform active:scale-95 shadow-md ${
                                                         card.visible ? 'bg-white text-black border-yellow-400' : 'bg-blue-800 border-white text-white'
                                                     } ${getAnimationClass(2, idx)}`}
                                                 >
@@ -906,19 +905,19 @@
 
                             {/* P1 (User - Bottom Right) */}
                             {players[0] && (
-                                <div className={`flex flex-col items-center bg-emerald-800/45 p-1 md:p-2 rounded-xl border w-[28vw] md:w-44 transition-all duration-300 tight-padding ${currentPlayer === 0 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
-                                    <div className="flex items-center gap-1 mb-0.5">
-                                        <div className={`w-1.5 h-1.5 rounded-full ${readyPlayers[0] ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                        <h2 className="text-[10px] font-semibold text-green-300">You</h2>
+                                <div className={`flex flex-col items-center bg-emerald-800/45 p-2 md:p-3 rounded-2xl border w-[28vw] md:w-56 transition-all duration-300 tight-padding ${currentPlayer === 0 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                    <div className="flex items-center gap-1.5 mb-1.5">
+                                        <div className={`w-2.5 h-2.5 rounded-full ${readyPlayers[0] ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                        <h2 className="text-xs md:text-sm font-bold text-green-300">You</h2>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-1">
+                                    <div className="grid grid-cols-2 gap-1.5 md:gap-2">
                                         {players[0].cards.map((card, idx) => {
-                                            if (!card) return <div key={idx} className="card-fluid rounded border border-dashed border-emerald-800/40 opacity-30"></div>;
+                                            if (!card) return <div key={idx} className="card-fluid rounded-lg border border-dashed border-emerald-800/40 opacity-30"></div>;
                                             return (
                                                 <div 
                                                     key={card.id || idx} 
                                                     onClick={() => handleCardClick(0, idx)}
-                                                    className={`card-fluid rounded flex items-center justify-center font-bold cursor-pointer border card-transition transform active:scale-95 shadow-sm ${
+                                                    className={`card-fluid rounded-lg flex items-center justify-center font-bold cursor-pointer border card-transition transform active:scale-95 shadow-md ${
                                                         card.visible || (activeCard && gameState === 'playing')
                                                             ? 'bg-white text-black border-yellow-400' 
                                                             : 'bg-red-800 border-white text-white'
@@ -936,36 +935,44 @@
                     </div>
 
                     {/* Notification Box */}
-                    <div className="w-full max-w-sm mx-auto flex flex-col items-center gap-1 bg-black/40 border border-emerald-800 rounded-xl p-1 text-center my-1">
-                        <p className="text-[11px] md:text-sm text-slate-100 font-medium px-2 truncate w-full">{message}</p>
+                    <div className="w-full max-w-md mx-auto flex flex-col items-center gap-1.5 bg-black/50 border border-emerald-800 rounded-2xl p-2 text-center my-2">
+                        <p className="text-xs md:text-base text-slate-100 font-semibold px-2 truncate w-full">{message}</p>
                         
                         {gameState === 'waiting-ready' && (
                             <button
                                 onClick={handleReadyNextTurn}
-                                className="bg-yellow-500 text-slate-950 font-black py-1 px-4 rounded text-[10px] md:text-xs active:scale-95 shadow-md"
+                                className="bg-yellow-500 text-slate-950 font-black py-2 px-6 rounded-lg text-xs md:text-sm active:scale-95 shadow-md mt-1"
                             >
                                 NEXT TURN 👉
                             </button>
                         )}
                     </div>
 
-                    {/* Bottom Toolbar: Perfectly visible on all mobile orientations */}
-                    <div className="w-full flex flex-row justify-between items-center bg-emerald-950 p-2 sm:p-3 rounded-xl gap-2 text-[11px] md:text-sm mb-1">
-                        <div className="flex gap-2">
-                            <button onClick={() => setGameState('menu')} className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-1 px-3 rounded text-[10px] md:text-xs transition-colors">Menu</button>
-                            <button onClick={handleStartClick} className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-extrabold py-1 px-3 rounded text-[10px] md:text-xs transition-colors">Reset</button>
-                            <button onClick={callShow} disabled={gameState !== 'playing' || showCalledBy !== null || matchWindowActive} className="bg-orange-600 hover:bg-orange-500 text-white font-extrabold py-1 px-3 rounded text-[10px] md:text-xs disabled:opacity-50 transition-colors">Show!</button>
+                    {/* 🎮 NEW ROBUST & READABLE BOTTOM TOOLBAR 🎮 */}
+                    <div className="w-full flex flex-col sm:flex-row justify-between items-center bg-emerald-950 p-3 sm:p-4 rounded-2xl gap-3 text-xs md:text-base mb-1 border border-emerald-800">
+                        <div className="flex gap-3 w-full sm:w-auto justify-center">
+                            <button onClick={() => setGameState('menu')} className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-lg text-xs md:text-sm transition-colors border border-emerald-700 shadow">
+                                Menu
+                            </button>
+                            <button onClick={handleStartClick} className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-extrabold py-2 px-5 rounded-lg text-xs md:text-sm transition-colors shadow">
+                                Reset
+                            </button>
+                            <button onClick={callShow} disabled={gameState !== 'playing' || showCalledBy !== null || matchWindowActive} className="bg-orange-600 hover:bg-orange-500 text-white font-extrabold py-2 px-5 rounded-lg text-xs md:text-sm disabled:opacity-50 transition-colors shadow">
+                                Show!
+                            </button>
                         </div>
                         {scores ? (
-                            <div className="flex gap-1.5 text-[10px] md:text-xs font-bold">
+                            <div className="flex gap-2 text-xs md:text-sm font-bold bg-black/30 px-3 py-1.5 rounded-lg">
                                 {scores.map((score, idx) => (
                                     <span key={idx} className={idx === 0 ? "text-green-300" : "text-red-300"}>
-                                        {idx === 0 ? "You" : `P${idx}`}:{score}
+                                        {idx === 0 ? "You" : `P${idx}`}: {score}
                                     </span>
                                 ))}
                             </div>
                         ) : (
-                            <div className="text-[10px] text-emerald-400 hidden sm:block">Joker (-1) | 7 (0) | J (11) | Q (12) | K (13)</div>
+                            <div className="text-xs text-emerald-400 hidden lg:block font-medium">
+                                Joker (-1) | 7 (0) | Jack (11) | Queen (12) | King (13)
+                            </div>
                         )}
                     </div>
                 </div>
