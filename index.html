@@ -424,6 +424,7 @@
                 clearTimers();
                 setMatchWindowActive(false);
                 setGameState('playing');
+                setMessage("Match selection cancelled.");
                 prepareNextTurn();
             };
 
@@ -600,7 +601,6 @@
                 }
                 
                 setGameState('waiting-ready');
-                setMessage(`Turn complete.`);
             };
 
             const handleReadyNextTurn = () => {
@@ -987,7 +987,7 @@
                             <div className="w-full flex flex-col gap-1.5">
                                 <button
                                     onClick={enterMatchMode}
-                                    disabled={discardPile.length === 0 || gameState === 'setup' || gameState === 'ended'}
+                                    disabled={discardPile.length === 0 || gameState === 'setup' || gameState === 'ended' || gameState === 'match-mode'}
                                     className={`w-full text-white font-black py-1.5 md:py-2 rounded-lg text-xs md:text-sm laptop-btn-large ${
                                         matchWindowActive 
                                             ? 'bg-yellow-500 text-slate-900 animate-pulse ring-2 ring-yellow-300' 
@@ -997,10 +997,11 @@
                                     {matchWindowActive ? `${matchCountdown}s` : "Match!"}
                                 </button>
 
-                                {matchWindowActive && (
+                                {/* Fixed cancel match condition: show when timer is active OR when in match-mode selection */}
+                                {(matchWindowActive || gameState === 'match-mode') && (
                                     <button 
                                         onClick={cancelMatchWindow}
-                                        className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-1 rounded-lg text-[10px] md:text-xs transition-colors"
+                                        className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-1.5 rounded-lg text-xs md:text-sm transition-colors border border-slate-700 shadow"
                                     >
                                         Cancel Match
                                     </button>
