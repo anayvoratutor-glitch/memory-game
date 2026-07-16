@@ -1176,8 +1176,10 @@
             );
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(App());
+        // CORRECTED RENDER PATTERN FOR REACT 18 + BABEL CDN
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(<App />);
     </script>
 </body>
 </html>
