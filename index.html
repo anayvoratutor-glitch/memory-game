@@ -144,11 +144,13 @@
             const [readyPlayers, setReadyPlayers] = useState([]); 
 
             const [aiMemory, setAiMemory] = useState({});
+            const [preMatchState, setPreMatchState] = useState(null); 
 
             const [animatingCard, setAnimatingCard] = useState(null);
             const [animatingIndices, setAnimatingIndices] = useState([]);
 
             const aiTimerRef = useRef(null);
+            const botMatchTimerRef = useRef(null);
             const countdownIntervalRef = useRef(null);
 
             useEffect(() => {
@@ -219,11 +221,13 @@
                 setAnimatingCard(null);
                 setAnimatingIndices([]);
                 setReadyPlayers(new Array(count).fill(false));
+                setPreMatchState(null);
                 clearTimers();
             };
 
             const clearTimers = () => {
                 if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
+                if (botMatchTimerRef.current) clearTimeout(botMatchTimerRef.current);
                 if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
             };
 
@@ -334,112 +338,184 @@
             };
 
             const enterMatchMode = () => {
-                if (discardPile.length === 0) return;
+                setPreMatchState({
+                    gameState: gameState,
+                    message: message
+                });
                 setGameState('match-mode');
                 setMessage("MATCH: Tap matching card on table!");
             };
 
-            const handleMatchAttempt = (pIdx, cIdx) => {
+            const handleMatchAttempt = (pIdx, cIdx, wasBotTriggered = false) => {
+                // If match window is already closed, do nothing
+                if (!matchWindowActive && gameState !== 'match-mode') return;
+
                 const targetCard = players[pIdx].cards[cIdx];
                 if (!targetCard) return;
 
-                const topDiscard = discardPile[discardPile.length - 1];
+                // Compare target to activeCard if we are holding a drawn card, otherwise look at the top of the discard pile
+                const comparisonCard = activeCard ? activeCard : discardPile[discardPile.length - 1];
+                if (!comparisonCard) return;
 
-                if (targetCard.value === topDiscard.value) {
-                    clearTimers();
-                    setMatchWindowActive(false);
+                clearTimers();
+                setMatchWindowActive(false);
 
-                    setAnimatingIndices([{ playerIdx: pIdx, cardIdx: cIdx, action: 'burn' }]);
+                // Handle exact simultaneous slap (50/50)
+                if (!wasBotTriggered && botMatchTimerRef.current) {
+                    const coinFlip = Math.random() < 0.5;
+                    if (!coinFlip) {
+                        setMessage("Too slow! A bot beat you to the match!");
+                        setTimeout(() => {
+                            // Find which bot was scheduled to slap
+                            for (let pIdxBot = 1; pIdxBot < playerCount; pIdxBot++) {
+                                for (let cIdxBot = 0; cIdxBot < players[pIdxBot].cards.length; cIdxBot++) {
+                                    const known = aiMemory[`${pIdxBot}-${cIdxBot}`];
+                                    if (known && known.value === comparisonCard.value) {
+                                        executeMatchSuccess(pIdxBot, cIdxBot, comparisonCard);
+                                        return;
+                                    }
+                                }
+                            }
+                        }, 1000);
+                        return;
+                    }
+                }
 
+                if (targetCard.value === comparisonCard.value) {
+                    executeMatchSuccess(pIdx, cIdx, comparisonCard);
+                } else {
+                    // Penalty Routine
+                    setAnimatingIndices([{ playerIdx: pIdx, cardIdx: cIdx, action: 'wrong' }]);
+                    
                     setTimeout(() => {
-                        for (let k = 0; k < playerCount; k++) {
-                            updateAiMemory(k, cIdx, null);
+                        let finalMessage = `WRONG! Penalty card added to ${players[pIdx].name}!`;
+                        const newDeck = [...deck];
+                        const penaltyCard = newDeck.pop();
+                        const updatedPlayers = JSON.parse(JSON.stringify(players));
+
+                        // Add penalty card
+                        updatedPlayers[pIdx].cards.push({ ...penaltyCard, visible: false, id: `p${pIdx}-penalty-${Date.now()}` });
+
+                        // High stakes active card check:
+                        if (activeCard && pIdx === 0) {
+                            finalMessage = `WRONG MATCH! The drawn ${activeCard.value}${activeCard.suit} is lost, and you get a penalty!`;
+                            setDiscardPile(prev => [...prev, activeCard]);
+                            setActiveCard(null);
                         }
 
-                        setMessage(`BURNED: ${players[pIdx].name} matched and burned the ${targetCard.value}${targetCard.suit}!`);
-                        
-                        const updatedPlayers = JSON.parse(JSON.stringify(players));
-                        updatedPlayers[pIdx].cards[cIdx] = null;
-                        
-                        setDiscardPile(prev => [...prev, targetCard]);
+                        setDeck(newDeck);
                         setPlayers(updatedPlayers);
                         setAnimatingIndices([]);
+                        setMessage(finalMessage);
 
-                        if (pIdx === 0) {
-                            setTimeout(() => {
-                                setGameState('playing');
-                                prepareNextTurn();
-                            }, 1800);
-                        } else {
-                            const validP1Indices = updatedPlayers[0].cards.map((c, i) => c !== null ? i : null).filter(v => v !== null);
-                            if (validP1Indices.length > 0) {
-                                setMessage(`Match! Giving card to ${players[pIdx].name}...`);
-                                setTimeout(() => {
-                                    const randomP1Index = validP1Indices[Math.floor(Math.random() * validP1Indices.length)];
-                                    const givenCard = updatedPlayers[0].cards[randomP1Index];
-                                    
-                                    setAnimatingIndices([{ playerIdx: 0, cardIdx: randomP1Index, targetPlayerIdx: pIdx, targetCardIdx: cIdx }]);
-                                    
-                                    setTimeout(() => {
-                                        const nextPlayers = JSON.parse(JSON.stringify(updatedPlayers));
-                                        nextPlayers[0].cards[randomP1Index] = null;
-                                        nextPlayers[pIdx].cards[cIdx] = givenCard;
-                                        
-                                        updateAiMemory(pIdx, cIdx, givenCard);
-
-                                        setPlayers(nextPlayers);
-                                        setAnimatingIndices([]);
-                                        setGameState('playing');
-                                        prepareNextTurn();
-                                    }, 350);
-                                }, 1000);
-                            } else {
-                                setTimeout(() => {
-                                    setGameState('playing');
-                                    prepareNextTurn();
-                                }, 1500);
-                            }
-                        }
+                        setTimeout(() => {
+                            restorePreMatchOrProceed();
+                        }, 2500);
                     }, 350);
-                } else {
-                    clearTimers();
-                    setMatchWindowActive(false);
+                }
+            };
 
-                    setMessage(`WRONG! Penalty card added to ${players[pIdx].name}!`);
-                    const newDeck = [...deck];
-                    const penaltyCard = newDeck.pop();
+            const executeMatchSuccess = (pIdx, cIdx, comparisonCard) => {
+                setAnimatingIndices([{ playerIdx: pIdx, cardIdx: cIdx, action: 'burn' }]);
+
+                setTimeout(() => {
+                    for (let k = 0; k < playerCount; k++) {
+                        updateAiMemory(k, cIdx, null);
+                    }
+
+                    let matchMsg = `BURNED: ${players[pIdx].name} matched and burned the ${players[pIdx].cards[cIdx].value}${players[pIdx].cards[cIdx].suit}!`;
                     const updatedPlayers = JSON.parse(JSON.stringify(players));
-                    updatedPlayers[pIdx].cards.push({ ...penaltyCard, visible: false, id: `p${pIdx}-penalty-${Date.now()}` });
-                    setDeck(newDeck);
-                    setPlayers(updatedPlayers);
+                    const targetCard = updatedPlayers[pIdx].cards[cIdx];
 
-                    setTimeout(() => {
-                        setGameState('playing');
-                        prepareNextTurn();
-                    }, 2000);
+                    updatedPlayers[pIdx].cards[cIdx] = null;
+                    
+                    // If matching with active card, discard both
+                    if (activeCard) {
+                        setDiscardPile(prev => [...prev, targetCard, activeCard]);
+                        setActiveCard(null);
+                    } else {
+                        setDiscardPile(prev => [...prev, targetCard]);
+                    }
+
+                    setPlayers(updatedPlayers);
+                    setAnimatingIndices([]);
+                    setMessage(matchMsg);
+
+                    if (pIdx === 0) {
+                        setTimeout(() => {
+                            restorePreMatchOrProceed();
+                        }, 1800);
+                    } else {
+                        // Card gift routine: Bot matches, player 1 must give them a card
+                        const validP1Indices = updatedPlayers[0].cards.map((c, i) => c !== null ? i : null).filter(v => v !== null);
+                        if (validP1Indices.length > 0) {
+                            setMessage(`Match! Giving card to ${players[pIdx].name}...`);
+                            setTimeout(() => {
+                                const randomP1Index = validP1Indices[Math.floor(Math.random() * validP1Indices.length)];
+                                const givenCard = updatedPlayers[0].cards[randomP1Index];
+                                
+                                setAnimatingIndices([{ playerIdx: 0, cardIdx: randomP1Index, targetPlayerIdx: pIdx, targetCardIdx: cIdx }]);
+                                
+                                setTimeout(() => {
+                                    const nextPlayers = JSON.parse(JSON.stringify(updatedPlayers));
+                                    nextPlayers[0].cards[randomP1Index] = null;
+                                    nextPlayers[pIdx].cards[cIdx] = givenCard;
+                                    
+                                    updateAiMemory(pIdx, cIdx, givenCard);
+
+                                    setPlayers(nextPlayers);
+                                    setAnimatingIndices([]);
+                                    restorePreMatchOrProceed();
+                                }, 350);
+                            }, 1000);
+                        } else {
+                            setTimeout(() => {
+                                restorePreMatchOrProceed();
+                            }, 1500);
+                        }
+                    }
+                }, 350);
+            };
+
+            const restorePreMatchOrProceed = () => {
+                if (preMatchState) {
+                    setGameState(preMatchState.gameState);
+                    setMessage(preMatchState.message);
+                    setPreMatchState(null);
+                } else {
+                    setGameState('playing');
+                    prepareNextTurn();
                 }
             };
 
             const cancelMatchWindow = () => {
                 clearTimers();
                 setMatchWindowActive(false);
-                setGameState('playing');
-                setMessage("Match selection cancelled.");
-                prepareNextTurn();
+                restorePreMatchOrProceed();
             };
 
             const triggerMatchWindow = (callbackOnComplete) => {
-                const topDiscard = discardPile[discardPile.length - 1] || activeCard;
+                const topDiscard = activeCard ? activeCard : (discardPile[discardPile.length - 1] || activeCard);
+                let botWillMatch = false;
+
                 if (topDiscard) {
+                    // Check if bots know any matching cards
                     for (let pIdx = 1; pIdx < playerCount; pIdx++) {
                         for (let cIdx = 0; cIdx < players[pIdx].cards.length; cIdx++) {
                             const known = aiMemory[`${pIdx}-${cIdx}`];
                             if (known && known.value === topDiscard.value) {
+                                botWillMatch = true;
                                 clearTimers();
-                                handleMatchAttempt(pIdx, cIdx);
-                                return;
+
+                                // Set random delay (600ms to 1800ms) to make bots react like humans
+                                const delay = Math.floor(Math.random() * 1200) + 600;
+                                botMatchTimerRef.current = setTimeout(() => {
+                                    handleMatchAttempt(pIdx, cIdx, true);
+                                }, delay);
+                                break;
                             }
                         }
+                        if (botWillMatch) break;
                     }
                 }
 
@@ -456,7 +532,9 @@
                     } else {
                         clearInterval(countdownIntervalRef.current);
                         setMatchWindowActive(false);
-                        callbackOnComplete();
+                        if (!botWillMatch) {
+                            callbackOnComplete();
+                        }
                     }
                 }, 1000);
             };
@@ -754,6 +832,10 @@
                     return 'scale-50 opacity-0 translate-y-8';
                 }
 
+                if (anim.action === 'wrong') {
+                    return 'border-red-500 animate-bounce';
+                }
+
                 if (anim.targetPlayerIdx !== undefined) {
                     return 'scale-90 opacity-40 rotate-12';
                 }
@@ -837,7 +919,7 @@
                                             <div className="border-t border-slate-800/80 pt-3">
                                                 <h3 className="font-bold text-yellow-400 text-sm md:text-base mb-1">Slap to Match!</h3>
                                                 <p className="text-slate-300 leading-relaxed">
-                                                    When any card is discarded, players have 4 seconds to click Match! and tap a card with the matching value to burn it from their hand.
+                                                    When any card is discarded (or when you draw a card), players can click Match! and tap a card with the matching value to burn it. If you guess wrong with an active drawn card, that drawn card is lost!
                                                 </p>
                                             </div>
                                         </div>
@@ -906,9 +988,15 @@
             return (
                 <div className="flex flex-col justify-between h-full py-2">
                     
-                    {/* Header */}
+                    {/* Header with Persistent SHOW called Banner */}
                     <div className="text-center mb-2 hide-on-short">
-                        <h1 className="text-xl md:text-3xl font-black text-yellow-400 tracking-wider laptop-title-large">MEMORY GRID</h1>
+                        {showCalledBy !== null ? (
+                            <div className="bg-orange-600/90 border-2 border-orange-400 text-white font-black py-1 px-4 rounded-xl inline-block shadow-lg text-xs md:text-sm animate-pulse">
+                                ⚠️ {showCalledBy === 0 ? "YOU" : players[showCalledBy].name} called SHOW! Final round!
+                            </div>
+                        ) : (
+                            <h1 className="text-xl md:text-3xl font-black text-yellow-400 tracking-wider laptop-title-large">MEMORY GRID</h1>
+                        )}
                     </div>
 
                     {/* Main Board Grid */}
@@ -987,7 +1075,7 @@
                             <div className="w-full flex flex-col gap-1.5">
                                 <button
                                     onClick={enterMatchMode}
-                                    disabled={discardPile.length === 0 || gameState === 'setup' || gameState === 'ended' || gameState === 'match-mode'}
+                                    disabled={gameState === 'setup' || gameState === 'ended' || gameState === 'match-mode' || (!activeCard && discardPile.length === 0)}
                                     className={`w-full text-white font-black py-1.5 md:py-2 rounded-lg text-xs md:text-sm laptop-btn-large ${
                                         matchWindowActive 
                                             ? 'bg-yellow-500 text-slate-900 animate-pulse ring-2 ring-yellow-300' 
@@ -1150,7 +1238,7 @@
                                         <div className="border-t border-slate-800/80 pt-3">
                                             <h3 className="font-bold text-yellow-400 text-sm md:text-base mb-1">Slap to Match!</h3>
                                             <p className="text-slate-300 leading-relaxed">
-                                                When any card is discarded, players have 4 seconds to click Match! and tap a card with the matching value to burn it from their hand.
+                                                When any card is discarded (or when you draw a card), players can click Match! and tap a card with the matching value to burn it. If you guess wrong with an active drawn card, that drawn card is lost!
                                             </p>
                                         </div>
                                     </div>
