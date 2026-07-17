@@ -20,6 +20,34 @@
             background-color: #064e3b; /* Classic dark emerald felt */
         }
 
+        /* CARD FLIGHT & BURNING ANIMATIONS */
+        @keyframes burnAway {
+            0% { transform: scale(1); opacity: 1; filter: brightness(1.5); }
+            50% { transform: scale(1.2); opacity: 0.8; filter: saturate(2) hue-rotate(45deg); }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        @keyframes wrongMatch {
+            0%, 100% { transform: translateX(0); border-color: #ef4444; }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+
+        @keyframes flyToCenter {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: translate(var(--tw-translate-x, 0px), var(--tw-translate-y, 0px)) scale(0.6); opacity: 0; }
+        }
+
+        .animate-burn {
+            animation: burnAway 0.45s ease-out forwards;
+        }
+
+        .animate-wrong {
+            animation: wrongMatch 0.4s ease-in-out;
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 12px #ef4444;
+        }
+
         /* PHONE VIEW */
         .card-fluid {
             width: 11vw;
@@ -297,7 +325,8 @@
             const swapCard = (index) => {
                 if (!activeCard) return;
                 
-                setAnimatingIndices([{ playerIdx: 0, cardIdx: index }]);
+                // Triggers a flying-to-center feel slide animation
+                setAnimatingIndices([{ playerIdx: 0, cardIdx: index, action: 'discard-slide' }]);
                 
                 setTimeout(() => {
                     const p1Cards = [...players[0].cards];
@@ -420,7 +449,7 @@
                         setTimeout(() => {
                             restorePreMatchOrProceed();
                         }, 2500);
-                    }, 350);
+                    }, 400);
                 }
             };
 
@@ -450,27 +479,23 @@
                     setMessage(matchMsg);
 
                     if (pIdx === 0) {
-                        // You matched your own card successfully, no gifting needed
                         setTimeout(() => {
                             restorePreMatchOrProceed();
                         }, 1800);
                     } else {
-                        // An opponent's card was matched!
                         const validP1Indices = updatedPlayers[0].cards.map((c, i) => c !== null ? i : null).filter(v => v !== null);
                         
-                        // If YOU matched their card manually, you get to choose what to give them
                         if (!wasBotTriggered && validP1Indices.length > 0) {
                             setGiftTargetIdx(pIdx);
                             setGameState('gift-card');
                             setMessage(`Match Success! Tap one of YOUR cards to give to ${players[pIdx].name}.`);
                         } else if (validP1Indices.length > 0) {
-                            // If a bot matched its own card or another bot, carry out a random gift to keep pacing fluid
                             setMessage(`Match! Giving card to ${players[pIdx].name}...`);
                             setTimeout(() => {
                                 const randomP1Index = validP1Indices[Math.floor(Math.random() * validP1Indices.length)];
                                 const givenCard = updatedPlayers[0].cards[randomP1Index];
                                 
-                                setAnimatingIndices([{ playerIdx: 0, cardIdx: randomP1Index, targetPlayerIdx: pIdx, targetCardIdx: cIdx }]);
+                                setAnimatingIndices([{ playerIdx: 0, cardIdx: randomP1Index, action: 'gift-fly' }]);
                                 
                                 setTimeout(() => {
                                     const nextPlayers = JSON.parse(JSON.stringify(updatedPlayers));
@@ -490,7 +515,7 @@
                             }, 1500);
                         }
                     }
-                }, 350);
+                }, 450);
             };
 
             const restorePreMatchOrProceed = () => {
@@ -567,10 +592,11 @@
                         const botCardSlot = players[targetBotIdx].cards.findIndex(c => c === null);
                         
                         if (botCardSlot !== -1) {
-                            const givenCard = players[0].cards[cIdx];
-                            setAnimatingIndices([{ playerIdx: 0, cardIdx: cIdx, targetPlayerIdx: targetBotIdx, targetCardIdx: botCardSlot }]);
+                            // Trigger physical flying animation when giving your card away
+                            setAnimatingIndices([{ playerIdx: 0, cardIdx: cIdx, action: 'gift-fly' }]);
                             
                             setTimeout(() => {
+                                const givenCard = players[0].cards[cIdx];
                                 const updatedPlayers = JSON.parse(JSON.stringify(players));
                                 updatedPlayers[0].cards[cIdx] = null;
                                 updatedPlayers[targetBotIdx].cards[botCardSlot] = givenCard;
@@ -640,8 +666,8 @@
 
             const performSwap = (p1, c1, p2, c2) => {
                 setAnimatingIndices([
-                    { playerIdx: p1, cardIdx: c1, targetPlayerIdx: p2, targetCardIdx: c2 },
-                    { playerIdx: p2, cardIdx: c2, targetPlayerIdx: p1, targetCardIdx: c1 }
+                    { playerIdx: p1, cardIdx: c1, action: 'swap-spin' },
+                    { playerIdx: p2, cardIdx: c2, action: 'swap-spin' }
                 ]);
 
                 setTimeout(() => {
@@ -689,18 +715,9 @@
             };
 
             const getNextPlayerCW = (current) => {
-                if (playerCount === 2) {
-                    return current === 0 ? 1 : 0;
-                } else if (playerCount === 3) {
-                    if (current === 0) return 1;
-                    if (current === 1) return 2;
-                    return 0;
-                } else { 
-                    if (current === 0) return 1;
-                    if (current === 1) return 2;
-                    if (current === 2) return 3;
-                    return 0;
-                }
+                if (playerCount === 2) return current === 0 ? 1 : 0;
+                if (playerCount === 3) return current === 0 ? 1 : (current === 1 ? 2 : 0);
+                return current === 0 ? 1 : (current === 1 ? 2 : (current === 2 ? 3 : 0));
             };
 
             const prepareNextTurn = () => {
@@ -818,7 +835,7 @@
                             }
                         }
                         
-                        setAnimatingIndices([{ playerIdx: botIdx, cardIdx: swapIdx }]);
+                        setAnimatingIndices([{ playerIdx: botIdx, cardIdx: swapIdx, action: 'discard-slide' }]);
                         
                         setTimeout(() => {
                             const swappedOut = botCards[swapIdx];
@@ -874,23 +891,23 @@
                 prepareNextTurn();
             };
 
-            const getAnimationClass = (playerIdx, cardIdx) => {
+            const getAnimationStyleClass = (playerIdx, cardIdx) => {
                 const anim = animatingIndices.find(a => a.playerIdx === playerIdx && a.cardIdx === cardIdx);
                 if (!anim) return '';
 
-                if (anim.action === 'burn') {
-                    return 'scale-50 opacity-0 translate-y-8';
+                if (anim.action === 'burn') return 'animate-burn';
+                if (anim.action === 'wrong') return 'animate-wrong';
+                
+                if (anim.action === 'discard-slide') {
+                    return 'scale-75 opacity-20 -translate-x-12 translate-y-4 duration-300';
                 }
-
-                if (anim.action === 'wrong') {
-                    return 'border-red-500 animate-bounce';
+                if (anim.action === 'gift-fly') {
+                    return 'scale-90 opacity-50 translate-x-16 -translate-y-16 rotate-12 duration-300';
                 }
-
-                if (anim.targetPlayerIdx !== undefined) {
-                    return 'scale-90 opacity-40 rotate-12';
+                if (anim.action === 'swap-spin') {
+                    return 'rotate-180 scale-75 duration-300';
                 }
-
-                return 'scale-90 opacity-40';
+                return '';
             };
 
             const tallyScores = () => {
@@ -921,7 +938,7 @@
                     <div className="flex flex-col items-center justify-center min-h-[90vh] text-center px-4">
                         <div className="bg-emerald-950/80 border-2 border-emerald-800/60 p-8 rounded-3xl shadow-2xl max-w-sm w-full backdrop-blur-md lg:max-w-md lg:p-12">
                             <h1 className="text-3xl font-black tracking-wider text-yellow-400 drop-shadow mb-1 laptop-title-large">MEMORY GRID</h1>
-                            <p className="text-emerald-200 text-xs mb-6 font-semibold laptop-text-large">Adaptive Desktop Edition</p>
+                            <p className="text-emerald-200 text-xs mb-6 font-semibold laptop-text-large">Animated Pro Edition</p>
                             
                             <div className="flex flex-col gap-3">
                                 <button 
@@ -1038,7 +1055,7 @@
             return (
                 <div className="flex flex-col justify-between h-full py-2">
                     
-                    {/* Header with Persistent SHOW called Banner */}
+                    {/* Header Banner */}
                     <div className="text-center mb-2 hide-on-short">
                         {showCalledBy !== null ? (
                             <div className="bg-orange-600/90 border-2 border-orange-400 text-white font-black py-1 px-4 rounded-xl inline-block shadow-lg text-xs md:text-sm animate-pulse">
@@ -1049,13 +1066,13 @@
                         )}
                     </div>
 
-                    {/* Main Board Grid */}
+                    {/* Table Layout */}
                     <div className="w-full flex flex-row justify-around items-center gap-1 md:gap-2 max-w-5xl mx-auto px-1 lg:gap-8">
                         
                         {/* LEFT COLUMN: Players 2 & 4 */}
                         <div className="flex flex-col gap-2 items-center justify-center lg:gap-6">
                             {players[1] && (
-                                <div className={`flex flex-col items-center justify-center bg-emerald-800/40 p-1.5 md:p-3 rounded-2xl border w-[29vw] md:w-56 transition-all duration-300 tight-padding lg:w-72 lg:p-4 ${currentPlayer === 1 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                <div className={`flex flex-col items-center justify-center bg-emerald-800/40 p-1.5 md:p-3 rounded-2xl border w-[29vw] md:w-56 transition-all duration-300 tight-padding lg:w-72 lg:p-4 ${currentPlayer === 1 ? 'border-yellow-400 ring-2 ring-yellow-400 scale-105' : 'border-emerald-700'}`}>
                                     <div className="flex items-center gap-1.5 mb-1.5">
                                         <h2 className="text-[10px] md:text-sm font-bold text-red-300 truncate max-w-[85px] laptop-text-large">{players[1].name}</h2>
                                     </div>
@@ -1068,7 +1085,7 @@
                                                     onClick={() => handleCardClick(1, idx)}
                                                     className={`card-fluid rounded-lg flex items-center justify-center font-bold cursor-pointer border card-transition transform active:scale-95 shadow-md ${
                                                         card.visible ? 'bg-white text-black border-yellow-400' : 'bg-blue-800 border-white text-white'
-                                                    } ${getAnimationClass(1, idx)}`}
+                                                    } ${getAnimationStyleClass(1, idx)}`}
                                                 >
                                                     {card.visible ? `${card.value}${card.suit}` : "?"}
                                                 </div>
@@ -1079,7 +1096,7 @@
                             )}
 
                             {players[3] && (
-                                <div className={`flex flex-col items-center justify-center bg-emerald-800/40 p-1.5 md:p-3 rounded-2xl border w-[29vw] md:w-56 transition-all duration-300 tight-padding lg:w-72 lg:p-4 ${currentPlayer === 3 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                <div className={`flex flex-col items-center justify-center bg-emerald-800/40 p-1.5 md:p-3 rounded-2xl border w-[29vw] md:w-56 transition-all duration-300 tight-padding lg:w-72 lg:p-4 ${currentPlayer === 3 ? 'border-yellow-400 ring-2 ring-yellow-400 scale-105' : 'border-emerald-700'}`}>
                                     <div className="flex items-center gap-1.5 mb-1.5">
                                         <h2 className="text-[10px] md:text-sm font-bold text-purple-300 truncate max-w-[85px] laptop-text-large">{players[3].name}</h2>
                                     </div>
@@ -1092,7 +1109,7 @@
                                                     onClick={() => handleCardClick(3, idx)}
                                                     className={`card-fluid rounded-lg flex items-center justify-center font-bold cursor-pointer border card-transition transform active:scale-95 shadow-md ${
                                                         card.visible ? 'bg-white text-black border-yellow-400' : 'bg-blue-800 border-white text-white'
-                                                    } ${getAnimationClass(3, idx)}`}
+                                                    } ${getAnimationStyleClass(3, idx)}`}
                                                 >
                                                     {card.visible ? `${card.value}${card.suit}` : "?"}
                                                 </div>
@@ -1103,20 +1120,20 @@
                             )}
                         </div>
 
-                        {/* CENTER PILING BOX */}
-                        <div className="flex flex-col items-center gap-2 bg-emerald-950/60 p-2 md:p-4 rounded-2xl border border-emerald-800 w-[30vw] md:w-48 tight-padding lg:w-[24rem] lg:p-6 lg:gap-4">
+                        {/* CENTER DECK & DISCARD */}
+                        <div className="flex flex-col items-center gap-2 bg-emerald-950/60 p-2 md:p-4 rounded-2xl border border-emerald-800 w-[30vw] md:w-48 tight-padding lg:w-[24rem] lg:p-6 lg:gap-4 shadow-inner">
                             <div className="flex gap-1 md:gap-3 justify-center items-center lg:gap-4">
                                 <button 
                                     onClick={drawFromDeck} 
                                     disabled={gameState !== 'playing' || activeCard || currentPlayer !== 0 || matchWindowActive}
-                                    className="pile-fluid bg-red-800 border border-white rounded-lg flex items-center justify-center font-bold text-white disabled:opacity-30 active:scale-95 shadow-md text-3xl"
+                                    className="pile-fluid bg-red-800 hover:brightness-110 border border-white rounded-lg flex items-center justify-center font-bold text-white disabled:opacity-30 active:scale-95 shadow-xl text-3xl card-transition"
                                 >
                                     *
                                 </button>
                                 <button 
                                     onClick={drawFromDiscard}
                                     disabled={gameState !== 'playing' || activeCard || discardPile.length === 0 || currentPlayer !== 0 || matchWindowActive}
-                                    className="pile-fluid bg-white text-black border border-yellow-400 rounded-lg flex items-center justify-center font-bold disabled:opacity-30 active:scale-95 shadow-md"
+                                    className="pile-fluid bg-white text-black border-2 border-yellow-400 rounded-lg flex items-center justify-center font-bold disabled:opacity-30 active:scale-95 shadow-xl card-transition"
                                 >
                                     {discardPile.length > 0 ? `${discardPile[discardPile.length - 1].value}${discardPile[discardPile.length - 1].suit}` : "Empty"}
                                 </button>
@@ -1126,13 +1143,13 @@
                                 <button
                                     onClick={enterMatchMode}
                                     disabled={gameState === 'setup' || gameState === 'ended' || gameState === 'match-mode' || gameState === 'gift-card' || (!activeCard && discardPile.length === 0)}
-                                    className={`w-full text-white font-black py-1.5 md:py-2 rounded-lg text-xs md:text-sm laptop-btn-large ${
+                                    className={`w-full text-white font-black py-1.5 md:py-2 rounded-lg text-xs md:text-sm laptop-btn-large transition-all duration-200 ${
                                         matchWindowActive 
-                                            ? 'bg-yellow-500 text-slate-900 animate-pulse ring-2 ring-yellow-300' 
-                                            : 'bg-red-600 disabled:opacity-50'
+                                            ? 'bg-yellow-500 text-slate-900 animate-pulse ring-4 ring-yellow-300 scale-105' 
+                                            : 'bg-red-600 hover:bg-red-500 disabled:opacity-50 shadow'
                                     }`}
                                 >
-                                    {matchWindowActive ? `${matchCountdown}s` : "Match!"}
+                                    {matchWindowActive ? `SLAP TO MATCH (${matchCountdown}s)` : "Match!"}
                                 </button>
 
                                 {(matchWindowActive || gameState === 'match-mode') && (
@@ -1146,12 +1163,12 @@
                             </div>
 
                             {activeCard && (
-                                <div className="flex flex-col md:flex-row items-center gap-1 border-t border-emerald-800 pt-2 w-full justify-center">
-                                    <div className="card-fluid bg-white text-black border border-yellow-400 rounded-lg flex flex-col items-center justify-center font-bold shadow-md">
+                                <div className="flex flex-col md:flex-row items-center gap-2 border-t border-emerald-800 pt-2 w-full justify-center animate-bounce">
+                                    <div className="card-fluid bg-white text-black border-2 border-yellow-400 rounded-lg flex flex-col items-center justify-center font-bold shadow-2xl">
                                         <div>{activeCard.value}</div>
                                         <div className="text-[10px] md:text-sm lg:text-lg">{activeCard.suit}</div>
                                     </div>
-                                    <button onClick={discardActive} className="bg-red-600 text-white font-bold text-[10px] md:text-xs px-1.5 py-1 rounded-md active:scale-90 lg:text-sm lg:px-4 lg:py-2">
+                                    <button onClick={discardActive} className="bg-red-600 hover:bg-red-500 text-white font-bold text-[10px] md:text-xs px-2 py-1.5 rounded-md active:scale-90 lg:text-sm lg:px-4 lg:py-2 shadow">
                                         Discard
                                     </button>
                                 </div>
@@ -1161,7 +1178,7 @@
                         {/* RIGHT COLUMN: Players 3 & 1 (You) */}
                         <div className="flex flex-col gap-2 items-center justify-center lg:gap-6">
                             {players[2] && (
-                                <div className={`flex flex-col items-center justify-center bg-emerald-800/40 p-1.5 md:p-3 rounded-2xl border w-[29vw] md:w-56 transition-all duration-300 tight-padding lg:w-72 lg:p-4 ${currentPlayer === 2 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                <div className={`flex flex-col items-center justify-center bg-emerald-800/40 p-1.5 md:p-3 rounded-2xl border w-[29vw] md:w-56 transition-all duration-300 tight-padding lg:w-72 lg:p-4 ${currentPlayer === 2 ? 'border-yellow-400 ring-2 ring-yellow-400 scale-105' : 'border-emerald-700'}`}>
                                     <div className="flex items-center gap-1.5 mb-1.5">
                                         <h2 className="text-[10px] md:text-sm font-bold text-pink-300 truncate max-w-[85px] laptop-text-large">{players[2].name}</h2>
                                     </div>
@@ -1174,7 +1191,7 @@
                                                     onClick={() => handleCardClick(2, idx)}
                                                     className={`card-fluid rounded-lg flex items-center justify-center font-bold cursor-pointer border card-transition transform active:scale-95 shadow-md ${
                                                         card.visible ? 'bg-white text-black border-yellow-400' : 'bg-blue-800 border-white text-white'
-                                                    } ${getAnimationClass(2, idx)}`}
+                                                    } ${getAnimationStyleClass(2, idx)}`}
                                                 >
                                                     {card.visible ? `${card.value}${card.suit}` : "?"}
                                                 </div>
@@ -1185,7 +1202,7 @@
                             )}
 
                             {players[0] && (
-                                <div className={`flex flex-col items-center justify-center bg-emerald-800/45 p-1.5 md:p-3 rounded-2xl border w-[29vw] md:w-56 transition-all duration-300 tight-padding lg:w-72 lg:p-4 ${currentPlayer === 0 || gameState === 'gift-card' ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-emerald-700'}`}>
+                                <div className={`flex flex-col items-center justify-center bg-emerald-800/45 p-1.5 md:p-3 rounded-2xl border w-[29vw] md:w-56 transition-all duration-300 tight-padding lg:w-72 lg:p-4 ${currentPlayer === 0 || gameState === 'gift-card' ? 'border-yellow-400 ring-4 ring-yellow-400 scale-105' : 'border-emerald-700'}`}>
                                     <div className="flex items-center gap-1.5 mb-1.5">
                                         <h2 className="text-[10px] md:text-sm font-bold text-green-300 laptop-text-large">You</h2>
                                     </div>
@@ -1198,9 +1215,9 @@
                                                     onClick={() => handleCardClick(0, idx)}
                                                     className={`card-fluid rounded-lg flex items-center justify-center font-bold cursor-pointer border card-transition transform active:scale-95 shadow-md ${
                                                         card.visible || (activeCard && gameState === 'playing') || gameState === 'gift-card'
-                                                            ? 'bg-white text-black border-yellow-400' 
+                                                            ? 'bg-white text-black border-2 border-yellow-400' 
                                                             : 'bg-red-800 border-white text-white'
-                                                    } ${getAnimationClass(0, idx)}`}
+                                                    } ${gameState === 'gift-card' ? 'animate-pulse bg-yellow-100' : ''} ${getAnimationStyleClass(0, idx)}`}
                                                 >
                                                     {card.visible ? `${card.value}${card.suit}` : (gameState === 'gift-card' ? "GIFT" : (activeCard ? "Swap" : "?"))}
                                                 </div>
@@ -1213,22 +1230,22 @@
 
                     </div>
 
-                    {/* Notification Box */}
-                    <div className="w-full max-w-md mx-auto flex flex-col items-center gap-1.5 bg-black/50 border border-emerald-800 rounded-2xl p-2 text-center my-2 lg:max-w-xl lg:p-4">
+                    {/* Messages & Actions Box */}
+                    <div className="w-full max-w-md mx-auto flex flex-col items-center gap-1.5 bg-black/60 border border-emerald-800 rounded-2xl p-2.5 text-center my-2 lg:max-w-xl lg:p-4 shadow-lg backdrop-blur-sm">
                         <p className="text-xs md:text-base text-slate-100 font-semibold px-2 truncate w-full laptop-message-large">{message}</p>
                         
                         {gameState === 'waiting-ready' && (
                             <button
                                 onClick={handleReadyNextTurn}
-                                className="bg-yellow-500 text-slate-950 font-black py-2 px-6 rounded-lg text-xs md:text-sm active:scale-95 shadow-md mt-1 laptop-btn-large"
+                                className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black py-2 px-6 rounded-lg text-xs md:text-sm active:scale-95 shadow-md mt-1 scale-105 duration-200 laptop-btn-large"
                             >
                                 NEXT TURN
                             </button>
                         )}
                     </div>
 
-                    {/* BOTTOM TOOLBAR */}
-                    <div className="w-full flex flex-col sm:flex-row justify-between items-center bg-emerald-950 p-3 sm:p-4 rounded-2xl gap-3 text-xs md:text-base mb-1 border border-emerald-800 lg:p-6">
+                    {/* Toolbar Panel */}
+                    <div className="w-full flex flex-col sm:flex-row justify-between items-center bg-emerald-950 p-3 sm:p-4 rounded-2xl gap-3 text-xs md:text-base mb-1 border border-emerald-800 lg:p-6 shadow-2xl">
                         <div className="flex gap-3 w-full sm:w-auto justify-center lg:gap-6">
                             <button onClick={() => setGameState('menu')} className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-lg text-xs md:text-sm transition-colors border border-slate-700 shadow laptop-btn-large">
                                 Menu
@@ -1329,7 +1346,6 @@
             );
         }
 
-        // Standard React 18 DOM Mounting
         const container = document.getElementById('root');
         const root = ReactDOM.createRoot(container);
         root.render(React.createElement(App));
