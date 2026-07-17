@@ -15,8 +15,9 @@
         
         html, body {
             overscroll-behavior-y: contain;
-            overflow: hidden;
-            height: 100%;
+            overflow-y: auto; /* Fixed: Allows scrolling if the window height is too small */
+            overflow-x: hidden;
+            min-height: 100%;
             background-color: #064e3b; /* Classic dark emerald felt */
         }
 
@@ -43,32 +44,32 @@
         /* DESKTOP SPECIFIC LAYOUT */
         @media (min-width: 1024px) {
             .card-fluid {
-                width: 7.5rem;
-                height: 10.5rem;
+                width: 5.5rem; /* Fixed: Reduced from 7.5rem to prevent vertical height overflow */
+                height: 7.7rem; /* Fixed: Reduced from 10.5rem to fit 4 players comfortably */
                 max-width: none;
                 max-height: none;
-                font-size: 2rem !important;
+                font-size: 1.5rem !important;
             }
             .pile-fluid {
-                width: 8.5rem !important;
-                height: 12rem !important;
+                width: 6.5rem !important; /* Fixed: Adjusted ratio matching new card dimensions */
+                height: 9.1rem !important;
                 max-width: none;
                 max-height: none;
-                font-size: 2rem !important;
+                font-size: 1.5rem !important;
             }
             .laptop-text-large {
-                font-size: 1.25rem !important;
+                font-size: 1.15rem !important;
             }
             .laptop-title-large {
-                font-size: 2.5rem !important;
+                font-size: 2.2rem !important;
             }
             .laptop-message-large {
-                font-size: 1.5rem !important;
-                padding: 0.75rem !important;
+                font-size: 1.35rem !important;
+                padding: 0.5rem !important;
             }
             .laptop-btn-large {
-                font-size: 1.1rem !important;
-                padding: 0.75rem 1.75rem !important;
+                font-size: 1.05rem !important;
+                padding: 0.6rem 1.5rem !important;
             }
         }
 
@@ -91,8 +92,8 @@
         }
     </style>
 </head>
-<body class="text-white p-2 sm:p-6 h-full flex flex-col justify-center">
-    <div id="root" class="w-full max-w-6xl mx-auto h-full flex flex-col justify-between"></div>
+<body class="text-white p-2 sm:p-6 min-h-screen flex flex-col justify-center">
+    <div id="root" class="w-full max-w-6xl mx-auto min-h-screen flex flex-col justify-between"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
@@ -151,7 +152,7 @@
 
             const aiTimerRef = useRef(null);
             const botMatchTimerRef = useRef(null);
-            const matchCallbackRef = useRef(null);
+            const countdownIntervalRef = useRef(null);
 
             useEffect(() => {
                 return () => clearTimers();
@@ -222,16 +223,13 @@
                 setAnimatingIndices([]);
                 setReadyPlayers(new Array(count).fill(false));
                 setPreMatchState(null);
-                matchCallbackRef.current = null;
                 clearTimers();
             };
 
             const clearTimers = () => {
                 if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
-                if (botMatchTimerRef.current) {
-                    clearTimeout(botMatchTimerRef.current);
-                    botMatchTimerRef.current = null;
-                }
+                if (botMatchTimerRef.current) clearTimeout(botMatchTimerRef.current);
+                if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
             };
 
             const handleSetupPeek = (index) => {
@@ -360,7 +358,6 @@
 
                 clearTimers();
                 setMatchWindowActive(false);
-                matchCallbackRef.current = null;
 
                 if (!wasBotTriggered && botMatchTimerRef.current) {
                     const coinFlip = Math.random() < 0.5;
@@ -486,12 +483,10 @@
             const cancelMatchWindow = () => {
                 clearTimers();
                 setMatchWindowActive(false);
-                matchCallbackRef.current = null;
                 restorePreMatchOrProceed();
             };
 
             const triggerMatchWindow = (callbackOnComplete) => {
-                matchCallbackRef.current = callbackOnComplete;
                 const topDiscard = activeCard ? activeCard : (discardPile[discardPile.length - 1] || activeCard);
                 let botWillMatch = false;
 
@@ -501,7 +496,7 @@
                             const known = aiMemory[`${pIdx}-${cIdx}`];
                             if (known && known.value === topDiscard.value) {
                                 botWillMatch = true;
-                                if (botMatchTimerRef.current) clearTimeout(botMatchTimerRef.current);
+                                clearTimers();
 
                                 const delay = Math.floor(Math.random() * 1200) + 600;
                                 botMatchTimerRef.current = setTimeout(() => {
@@ -515,30 +510,24 @@
                 }
 
                 setMatchWindowActive(true);
-                setMatchCountdown(4);
-                setMessage("Match Window open! (4s)");
-            };
+                let timeLeft = 4;
+                setMatchCountdown(timeLeft);
+                setMessage(`Match Window open! (${timeLeft}s)`);
 
-            // Bulletproof Declarative Match Window Countdown Effect
-            useEffect(() => {
-                if (!matchWindowActive) return;
-
-                if (matchCountdown > 0) {
-                    const timer = setTimeout(() => {
-                        setMatchCountdown(prev => prev - 1);
-                        setMessage(`Match Window open! (${matchCountdown - 1}s)`);
-                    }, 1000);
-                    return () => clearTimeout(timer);
-                } else {
-                    setMatchWindowActive(false);
-                    if (!botMatchTimerRef.current) {
-                        if (matchCallbackRef.current) {
-                            matchCallbackRef.current();
-                            matchCallbackRef.current = null;
+                countdownIntervalRef.current = setInterval(() => {
+                    timeLeft -= 1;
+                    setMatchCountdown(timeLeft);
+                    if (timeLeft > 0) {
+                        setMessage(`Match Window open! (${timeLeft}s)`);
+                    } else {
+                        clearInterval(countdownIntervalRef.current);
+                        setMatchWindowActive(false);
+                        if (!botWillMatch) {
+                            callbackOnComplete();
                         }
                     }
-                }
-            }, [matchWindowActive, matchCountdown]);
+                }, 1000);
+            };
 
             const handleCardClick = (pIdx, cIdx) => {
                 if (!players[pIdx].cards[cIdx] && gameState !== 'match-mode') return;
@@ -987,7 +976,8 @@
             }
 
             return (
-                <div className="flex flex-col justify-between h-full py-2">
+                /* Fixed: Changed layout wrapper to min-h-screen instead of absolute overflow h-full */
+                <div className="flex flex-col justify-between min-h-screen py-2">
                     
                     {/* Header with Persistent SHOW called Banner */}
                     <div className="text-center mb-2 hide-on-short">
@@ -1181,10 +1171,10 @@
                     {/* BOTTOM TOOLBAR */}
                     <div className="w-full flex flex-col sm:flex-row justify-between items-center bg-emerald-950 p-3 sm:p-4 rounded-2xl gap-3 text-xs md:text-base mb-1 border border-emerald-800 lg:p-6">
                         <div className="flex gap-3 w-full sm:w-auto justify-center lg:gap-6">
-                            <button onClick={() => setGameState('menu')} className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-lg text-xs md:text-sm transition-colors border border-emerald-700 shadow laptop-btn-large">
+                            <button onClick={() => setGameState('menu')} className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-lg text-xs md:text-sm transition-colors border border-slate-700 shadow laptop-btn-large">
                                 Menu
                             </button>
-                            <button onClick={() => setShowRules(true)} className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-lg text-xs md:text-sm transition-colors border border-emerald-700 shadow laptop-btn-large">
+                            <button onClick={() => setShowRules(true)} className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-lg text-xs md:text-sm transition-colors border border-slate-700 shadow laptop-btn-large">
                                 Rules
                             </button>
                             <button onClick={handleStartClick} className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-extrabold py-2 px-5 rounded-lg text-xs md:text-sm transition-colors shadow laptop-btn-large">
@@ -1280,7 +1270,6 @@
             );
         }
 
-        // Standard React 18 DOM Mounting
         const container = document.getElementById('root');
         const root = ReactDOM.createRoot(container);
         root.render(React.createElement(App));
