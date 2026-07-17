@@ -15,9 +15,8 @@
         
         html, body {
             overscroll-behavior-y: contain;
-            overflow-y: auto; /* Fixed: Allows scrolling if the window height is too small */
-            overflow-x: hidden;
-            min-height: 100%;
+            overflow: hidden;
+            height: 100%;
             background-color: #064e3b; /* Classic dark emerald felt */
         }
 
@@ -44,32 +43,32 @@
         /* DESKTOP SPECIFIC LAYOUT */
         @media (min-width: 1024px) {
             .card-fluid {
-                width: 5.5rem; /* Fixed: Reduced from 7.5rem to prevent vertical height overflow */
-                height: 7.7rem; /* Fixed: Reduced from 10.5rem to fit 4 players comfortably */
+                width: 5.5rem;
+                height: 7.7rem;
                 max-width: none;
                 max-height: none;
                 font-size: 1.5rem !important;
             }
             .pile-fluid {
-                width: 6.5rem !important; /* Fixed: Adjusted ratio matching new card dimensions */
-                height: 9.1rem !important;
+                width: 6.5rem !important;
+                height: 9rem !important;
                 max-width: none;
                 max-height: none;
                 font-size: 1.5rem !important;
             }
             .laptop-text-large {
-                font-size: 1.15rem !important;
+                font-size: 1.1rem !important;
             }
             .laptop-title-large {
-                font-size: 2.2rem !important;
+                font-size: 2rem !important;
             }
             .laptop-message-large {
-                font-size: 1.35rem !important;
+                font-size: 1.25rem !important;
                 padding: 0.5rem !important;
             }
             .laptop-btn-large {
-                font-size: 1.05rem !important;
-                padding: 0.6rem 1.5rem !important;
+                font-size: 1rem !important;
+                padding: 0.5rem 1.25rem !important;
             }
         }
 
@@ -92,8 +91,8 @@
         }
     </style>
 </head>
-<body class="text-white p-2 sm:p-6 min-h-screen flex flex-col justify-center">
-    <div id="root" class="w-full max-w-6xl mx-auto min-h-screen flex flex-col justify-between"></div>
+<body class="text-white p-2 sm:p-6 h-full flex flex-col justify-center">
+    <div id="root" class="w-full max-w-6xl mx-auto h-full flex flex-col justify-between"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
@@ -976,8 +975,7 @@
             }
 
             return (
-                /* Fixed: Changed layout wrapper to min-h-screen instead of absolute overflow h-full */
-                <div className="flex flex-col justify-between min-h-screen py-2">
+                <div className="flex flex-col justify-between h-full py-2">
                     
                     {/* Header with Persistent SHOW called Banner */}
                     <div className="text-center mb-2 hide-on-short">
@@ -1045,7 +1043,7 @@
                         </div>
 
                         {/* CENTER PILING BOX */}
-                        <div className="flex flex-col items-center gap-2 bg-emerald-950/60 p-2 md:p-4 rounded-2xl border border-emerald-800 w-[30vw] md:w-48 tight-padding lg:w-[24rem] lg:p-6 lg:gap-4">
+                        <div className="flex flex-col items-center gap-2 bg-emerald-950/60 p-2 md:p-4 rounded-2xl border border-emerald-800 w-[30vw] md:w-48 tight-padding lg:w-[18rem] lg:p-6 lg:gap-4">
                             <div className="flex gap-1 md:gap-3 justify-center items-center lg:gap-4">
                                 <button 
                                     onClick={drawFromDeck} 
@@ -1171,10 +1169,10 @@
                     {/* BOTTOM TOOLBAR */}
                     <div className="w-full flex flex-col sm:flex-row justify-between items-center bg-emerald-950 p-3 sm:p-4 rounded-2xl gap-3 text-xs md:text-base mb-1 border border-emerald-800 lg:p-6">
                         <div className="flex gap-3 w-full sm:w-auto justify-center lg:gap-6">
-                            <button onClick={() => setGameState('menu')} className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-lg text-xs md:text-sm transition-colors border border-slate-700 shadow laptop-btn-large">
+                            <button onClick={() => setGameState('menu')} className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-lg text-xs md:text-sm transition-colors border border-emerald-700 shadow laptop-btn-large">
                                 Menu
                             </button>
-                            <button onClick={() => setShowRules(true)} className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-lg text-xs md:text-sm transition-colors border border-slate-700 shadow laptop-btn-large">
+                            <button onClick={() => setShowRules(true)} className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-lg text-xs md:text-sm transition-colors border border-emerald-700 shadow laptop-btn-large">
                                 Rules
                             </button>
                             <button onClick={handleStartClick} className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-extrabold py-2 px-5 rounded-lg text-xs md:text-sm transition-colors shadow laptop-btn-large">
