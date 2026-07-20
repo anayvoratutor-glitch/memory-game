@@ -160,6 +160,7 @@
             const showCalledByRef = useRef(showCalledBy);
             const readyPlayersRef = useRef(readyPlayers);
             const turnsAfterShowRef = useRef(turnsAfterShow);
+            const discardPileRef = useRef(discardPile);
 
             useEffect(() => { deckRef.current = deck; }, [deck]);
             useEffect(() => { playersRef.current = players; }, [players]);
@@ -167,6 +168,24 @@
             useEffect(() => { showCalledByRef.current = showCalledBy; }, [showCalledBy]);
             useEffect(() => { readyPlayersRef.current = readyPlayers; }, [readyPlayers]);
             useEffect(() => { turnsAfterShowRef.current = turnsAfterShow; }, [turnsAfterShow]);
+            useEffect(() => { discardPileRef.current = discardPile; }, [discardPile]);
+
+            useEffect(() => {
+                window.memoryGameTest = {
+                    getState: () => ({ deck, discardPile, gameState, activeCard, message, currentPlayer, players, showCalledBy, matchWindowActive }),
+                    forceState: (state) => {
+                        if (state.deck) setDeck(state.deck);
+                        if (state.discardPile) setDiscardPile(state.discardPile);
+                        if (state.gameState) setGameState(state.gameState);
+                        if (state.activeCard !== undefined) setActiveCard(state.activeCard);
+                        if (state.message !== undefined) setMessage(state.message);
+                    },
+                    drawFromDeck,
+                    drawFromDiscard,
+                    restoreDeckFromDiscard: (currentDeck, currentDiscard) => restoreDeckFromDiscard(currentDeck, currentDiscard),
+                };
+                return () => { delete window.memoryGameTest; };
+            }, [deck, discardPile, gameState, activeCard, message, currentPlayer, players, showCalledBy, matchWindowActive]);
 
             useEffect(() => {
                 return () => clearTimers();
@@ -275,9 +294,26 @@
                 });
             };
 
+            const restoreDeckFromDiscard = (currentDeck, currentDiscard) => {
+                if (currentDeck.length > 0) return currentDeck;
+                if (currentDiscard.length <= 1) return currentDeck;
+
+                const topDiscard = currentDiscard[currentDiscard.length - 1];
+                const reshuffle = currentDiscard.slice(0, -1).sort(() => Math.random() - 0.5);
+                setDeck(reshuffle);
+                setDiscardPile([topDiscard]);
+                setMessage("The discard pile was reshuffled back into the deck.");
+                return reshuffle;
+            };
+
             const drawFromDeck = () => {
-                if (gameState !== 'playing' || activeCard || matchWindowActive || deck.length === 0) return;
-                const newDeck = [...deck];
+                if (gameState !== 'playing' || activeCard || matchWindowActive) return;
+                const availableDeck = restoreDeckFromDiscard(deck, discardPile);
+                if (availableDeck.length === 0) {
+                    setMessage("Deck is empty and no cards are available to reshuffle.");
+                    return;
+                }
+                const newDeck = [...availableDeck];
                 const card = newDeck.pop();
                 setDeck(newDeck);
                 if (!card) {
@@ -705,7 +741,8 @@
             };
 
             const executeAITurn = (botIdx, isExtraTurn = false) => {
-                const currentDeck = [...deckRef.current];
+                let currentDeck = [...deckRef.current];
+                currentDeck = restoreDeckFromDiscard(currentDeck, discardPileRef.current);
                 if (currentDeck.length === 0) return;
                 const drawn = currentDeck.pop();
                 setDeck(currentDeck);
@@ -1069,7 +1106,7 @@
                             <div className="flex gap-1 md:gap-3 justify-center items-center lg:gap-4">
                                 <button 
                                     onClick={drawFromDeck} 
-                                    disabled={gameState !== 'playing' || activeCard || currentPlayer !== 0 || matchWindowActive || deck.length === 0}
+                                    disabled={gameState !== 'playing' || activeCard || currentPlayer !== 0 || matchWindowActive || (deck.length === 0 && discardPile.length <= 1)}
                                     className="pile-fluid bg-red-800 border border-white rounded-lg flex items-center justify-center font-bold text-white disabled:opacity-30 active:scale-95 shadow-md text-3xl"
                                 >
                                     *
