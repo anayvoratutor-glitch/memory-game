@@ -276,10 +276,14 @@
             };
 
             const drawFromDeck = () => {
-                if (gameState !== 'playing' || activeCard || matchWindowActive) return;
+                if (gameState !== 'playing' || activeCard || matchWindowActive || deck.length === 0) return;
                 const newDeck = [...deck];
                 const card = newDeck.pop();
                 setDeck(newDeck);
+                if (!card) {
+                    setMessage("Deck is empty.");
+                    return;
+                }
                 setActiveCard(card);
                 setMessage(`Drew ${card.value}${card.suit}. Swap or discard.`);
             };
@@ -1065,7 +1069,7 @@
                             <div className="flex gap-1 md:gap-3 justify-center items-center lg:gap-4">
                                 <button 
                                     onClick={drawFromDeck} 
-                                    disabled={gameState !== 'playing' || activeCard || currentPlayer !== 0 || matchWindowActive}
+                                    disabled={gameState !== 'playing' || activeCard || currentPlayer !== 0 || matchWindowActive || deck.length === 0}
                                     className="pile-fluid bg-red-800 border border-white rounded-lg flex items-center justify-center font-bold text-white disabled:opacity-30 active:scale-95 shadow-md text-3xl"
                                 >
                                     *
