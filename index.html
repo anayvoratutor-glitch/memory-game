@@ -172,17 +172,24 @@
 
             useEffect(() => {
                 window.memoryGameTest = {
-                    getState: () => ({ deck, discardPile, gameState, activeCard, message, currentPlayer, players, showCalledBy, matchWindowActive }),
+                    getState: () => ({ deck, discardPile, gameState, activeCard, message, currentPlayer, players, showCalledBy, matchWindowActive, playerCount }),
                     forceState: (state) => {
                         if (state.deck) setDeck(state.deck);
                         if (state.discardPile) setDiscardPile(state.discardPile);
                         if (state.gameState) setGameState(state.gameState);
                         if (state.activeCard !== undefined) setActiveCard(state.activeCard);
                         if (state.message !== undefined) setMessage(state.message);
+                        if (state.currentPlayer !== undefined) setCurrentPlayer(state.currentPlayer);
+                        if (state.players) setPlayers(state.players);
+                        if (state.playerCount !== undefined) setPlayerCount(state.playerCount);
+                        if (state.showCalledBy !== undefined) setShowCalledBy(state.showCalledBy);
+                        if (state.matchWindowActive !== undefined) setMatchWindowActive(state.matchWindowActive);
                     },
                     drawFromDeck,
                     drawFromDiscard,
+                    discardActive,
                     restoreDeckFromDiscard: (currentDeck, currentDiscard) => restoreDeckFromDiscard(currentDeck, currentDiscard),
+                    handleCardClick,
                 };
                 return () => { delete window.memoryGameTest; };
             }, [deck, discardPile, gameState, activeCard, message, currentPlayer, players, showCalledBy, matchWindowActive]);
